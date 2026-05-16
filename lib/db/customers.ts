@@ -1,0 +1,95 @@
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentBusiness } from "@/lib/db/current-business";
+
+export type Customer = {
+  id: string;
+  business_id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CustomerInput = {
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  notes?: string | null;
+};
+
+export async function listCustomers(): Promise<Customer[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getCustomer(id: string): Promise<Customer | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function createCustomer(input: CustomerInput): Promise<Customer> {
+  const business = await getCurrentBusiness();
+  if (!business) throw new Error("No current business");
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .insert({
+      business_id: business.id,
+      name: input.name,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      address: input.address ?? null,
+      notes: input.notes ?? null,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCustomer(
+  id: string,
+  input: CustomerInput,
+): Promise<Customer> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .update({
+      name: input.name,
+      phone: input.phone ?? null,
+      email: input.email ?? null,
+      address: input.address ?? null,
+      notes: input.notes ?? null,
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCustomer(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("customers").delete().eq("id", id);
+  if (error) throw error;
+}
