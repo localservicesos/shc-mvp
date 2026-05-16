@@ -90,3 +90,25 @@ export function dayRangeFromUtc(
   end.setUTCDate(end.getUTCDate() + days);
   return { startUtc, endUtc: end.toISOString() };
 }
+
+/** Shift a "YYYY-MM-DD" date string by N days (positive or negative). */
+export function shiftDateString(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
+/** "Fri 16 May 2026" — for schedule day headers. */
+export function formatDayLabel(dateStr: string, tz: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const utcNoon = new Date(Date.UTC(y, m - 1, d, 12));
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: tz,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(utcNoon);
+}
