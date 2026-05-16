@@ -130,3 +130,50 @@ export async function listJobsForCustomer(
 ): Promise<JobWithRelations[]> {
   return listJobs({ customerId });
 }
+
+/**
+ * Jobs whose scheduled_start falls in the given UTC range. Used by the
+ * Dashboard (today bucket) and the Schedule view.
+ */
+export async function listJobsBetween(
+  startUtc: string,
+  endUtc: string,
+  options: { status?: JobStatus | "all" } = {},
+): Promise<JobWithRelations[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("jobs")
+    .select(RELATIONS)
+    .gte("scheduled_start", startUtc)
+    .lt("scheduled_start", endUtc)
+    .order("scheduled_start", { ascending: true });
+
+  if (options.status && options.status !== "all") {
+    query = query.eq("status", options.status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as unknown as JobWithRelations[];
+}
+
+/** Jobs with the given status, optionally restricted to scheduled_start >= some UTC instant. */
+export async function listJobsByStatus(
+  status: JobStatus,
+  options: { fromUtc?: string } = {},
+): Promise<JobWithRelations[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("jobs")
+    .select(RELATIONS)
+    .eq("status", status)
+    .order("scheduled_start", { ascending: true, nullsFirst: false });
+
+  if (options.fromUtc) {
+    query = query.gte("scheduled_start", options.fromUtc);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as unknown as JobWithRelations[];
+}
