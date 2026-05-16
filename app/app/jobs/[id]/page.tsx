@@ -12,11 +12,15 @@ import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { JobStatusActions } from "@/components/jobs/status-actions";
 import { getJob } from "@/lib/db/jobs";
 import { getInvoiceByJob } from "@/lib/db/invoices";
+import { listJobPhotos } from "@/lib/db/job-photos";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
 import { deleteJobAction } from "../actions";
 import { generateInvoiceFromJobAction } from "@/app/app/invoices/actions";
+import { uploadJobPhotoAction } from "./photos/actions";
 import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
+import { PhotoUploader } from "@/components/jobs/photo-uploader";
+import { PhotoGrid } from "@/components/jobs/photo-grid";
 import { FileText } from "lucide-react";
 
 export const metadata = {
@@ -32,7 +36,12 @@ export default async function JobDetailPage({
   const job = await getJob(id);
   if (!job) notFound();
 
-  const invoice = await getInvoiceByJob(job.id);
+  const [invoice, photos] = await Promise.all([
+    getInvoiceByJob(job.id),
+    listJobPhotos(job.id),
+  ]);
+
+  const uploadAction = uploadJobPhotoAction.bind(null, job.id);
 
   const vehicleText = job.vehicle
     ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
@@ -173,8 +182,9 @@ export default async function JobDetailPage({
         <CardHeader>
           <CardTitle className="text-base">Photos</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Coming next — before/after photos via Supabase Storage.
+        <CardContent className="space-y-4">
+          <PhotoUploader action={uploadAction} />
+          <PhotoGrid jobId={job.id} photos={photos} />
         </CardContent>
       </Card>
 
