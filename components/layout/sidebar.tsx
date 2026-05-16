@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Calendar,
   ClipboardList,
+  FileText,
   LayoutDashboard,
   Users,
   Wrench,
@@ -22,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/customers", label: "Customers", icon: Users },
   { href: "/app/jobs", label: "Jobs", icon: ClipboardList },
   { href: "/app/schedule", label: "Schedule", icon: Calendar },
+  { href: "/app/invoices", label: "Invoices", icon: FileText },
   { href: "/app/services", label: "Services", icon: Wrench },
 ];
 

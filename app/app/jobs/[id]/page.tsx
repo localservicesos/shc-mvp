@@ -11,9 +11,13 @@ import {
 import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { JobStatusActions } from "@/components/jobs/status-actions";
 import { getJob } from "@/lib/db/jobs";
+import { getInvoiceByJob } from "@/lib/db/invoices";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
 import { deleteJobAction } from "../actions";
+import { generateInvoiceFromJobAction } from "@/app/app/invoices/actions";
+import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
+import { FileText } from "lucide-react";
 
 export const metadata = {
   title: "Job",
@@ -27,6 +31,8 @@ export default async function JobDetailPage({
   const { id } = await params;
   const job = await getJob(id);
   if (!job) notFound();
+
+  const invoice = await getInvoiceByJob(job.id);
 
   const vehicleText = job.vehicle
     ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
@@ -173,11 +179,39 @@ export default async function JobDetailPage({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">Invoice</CardTitle>
+          {invoice ? (
+            <InvoiceStatusBadge status={invoice.status} />
+          ) : null}
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Coming next — generate an invoice when the job is marked ready.
+        <CardContent>
+          {invoice ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">{invoice.invoice_number}</p>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {formatMoney(invoice.amount)}
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/app/invoices/${invoice.id}`}>
+                  Open invoice
+                </Link>
+              </Button>
+            </div>
+          ) : job.status === "ready" || job.status === "completed" ? (
+            <form action={generateInvoiceFromJobAction.bind(null, job.id)}>
+              <Button type="submit" size="sm">
+                <FileText className="mr-2 h-4 w-4" />
+                Generate invoice
+              </Button>
+            </form>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Mark the job as <strong>ready</strong> to generate an invoice.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

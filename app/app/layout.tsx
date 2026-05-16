@@ -45,7 +45,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-svh">
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-background md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r bg-background md:flex print:hidden">
         <div className="flex-1 overflow-y-auto">
           <Sidebar businessName={business.name} />
         </div>
