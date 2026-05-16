@@ -10,6 +10,10 @@ import {
 } from "@/components/ui/card";
 import { getCustomer } from "@/lib/db/customers";
 import { describeVehicle, listVehiclesForCustomer } from "@/lib/db/vehicles";
+import { listJobsForCustomer } from "@/lib/db/jobs";
+import { formatScheduled } from "@/lib/utils/date";
+import { formatMoney } from "@/lib/utils/format";
+import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { deleteCustomerAction } from "../actions";
 import { deleteVehicleAction } from "./vehicles/actions";
 
@@ -26,7 +30,10 @@ export default async function CustomerDetailPage({
   const customer = await getCustomer(id);
   if (!customer) notFound();
 
-  const vehicles = await listVehiclesForCustomer(customer.id);
+  const [vehicles, jobs] = await Promise.all([
+    listVehiclesForCustomer(customer.id),
+    listJobsForCustomer(customer.id),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -156,11 +163,59 @@ export default async function CustomerDetailPage({
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">Job history</CardTitle>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/app/jobs/new?customer_id=${customer.id}`}>
+              <Plus className="mr-2 h-4 w-4" />
+              New job
+            </Link>
+          </Button>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Coming next — past and upcoming jobs for this customer.
+        <CardContent>
+          {jobs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No jobs yet for this customer.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {jobs.map((job) => {
+                const vehicleText = job.vehicle
+                  ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
+                      .filter(Boolean)
+                      .join(" ") || job.vehicle.plate
+                  : null;
+                return (
+                  <li
+                    key={job.id}
+                    className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0 space-y-0.5">
+                      <Link
+                        href={`/app/jobs/${job.id}`}
+                        className="text-sm font-medium hover:underline"
+                      >
+                        {formatScheduled(job.scheduled_start)}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {[job.service?.name, vehicleText]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {job.price !== null ? (
+                        <span className="text-sm tabular-nums">
+                          {formatMoney(job.price)}
+                        </span>
+                      ) : null}
+                      <JobStatusBadge status={job.status} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -39,6 +39,17 @@ export async function listVehiclesForCustomer(
   return data ?? [];
 }
 
+export async function listAllVehicles(): Promise<Vehicle[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getVehicle(id: string): Promise<Vehicle | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
