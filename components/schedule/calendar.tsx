@@ -14,12 +14,15 @@ const HOURS = Array.from(
 const GRID_HEIGHT_PX = HOURS.length * HOUR_PX;
 
 const EVENT_STYLES: Record<JobStatus, string> = {
-  booked: "border-blue-300 bg-blue-50 text-blue-900",
-  in_progress: "border-amber-300 bg-amber-50 text-amber-900",
-  ready: "border-emerald-300 bg-emerald-50 text-emerald-900",
-  completed: "border-muted bg-muted text-muted-foreground",
+  booked:
+    "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100",
+  in_progress:
+    "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100",
+  ready:
+    "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100",
+  completed: "border-border bg-muted text-muted-foreground",
   cancelled:
-    "border-rose-300 bg-rose-50 text-rose-900 line-through opacity-70",
+    "border-rose-300 bg-rose-50 text-rose-900 line-through opacity-70 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100",
 };
 
 type LaidOutEvent = {

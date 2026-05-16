@@ -2,11 +2,15 @@ import { cn } from "@/lib/utils";
 import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/db/jobs";
 
 const STYLES: Record<JobStatus, string> = {
-  booked: "bg-blue-100 text-blue-700",
-  in_progress: "bg-amber-100 text-amber-800",
-  ready: "bg-emerald-100 text-emerald-700",
+  booked:
+    "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300",
+  in_progress:
+    "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
+  ready:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300",
   completed: "bg-muted text-muted-foreground",
-  cancelled: "bg-rose-100 text-rose-700",
+  cancelled:
+    "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
 };
 
 export function JobStatusBadge({ status }: { status: JobStatus }) {
