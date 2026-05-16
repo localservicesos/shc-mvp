@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
+import { Calendar } from "@/components/schedule/calendar";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import { listJobsBetween, type JobWithRelations } from "@/lib/db/jobs";
 import {
@@ -127,7 +128,17 @@ export default async function SchedulePage({
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="hidden md:block">
+        <Calendar
+          startDate={startDate}
+          days={days}
+          jobs={jobs}
+          tz={tz}
+          todayDate={today}
+        />
+      </div>
+
+      <div className="space-y-4 md:hidden">
         {Array.from(grouped.entries()).map(([dateKey, dayJobs]) => (
           <Card key={dateKey}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
