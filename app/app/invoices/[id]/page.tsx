@@ -111,9 +111,20 @@ export default async function InvoiceDetailPage({
               From
             </p>
             <p className="text-lg font-semibold">{business?.name ?? "—"}</p>
-            <p className="text-xs text-muted-foreground">
-              {business?.currency ?? "AUD"} · {business?.timezone}
-            </p>
+            {business?.abn ? (
+              <p className="text-xs text-muted-foreground">ABN {business.abn}</p>
+            ) : null}
+            {business?.phone ? (
+              <p className="text-xs text-muted-foreground">{business.phone}</p>
+            ) : null}
+            {business?.email ? (
+              <p className="text-xs text-muted-foreground">{business.email}</p>
+            ) : null}
+            {business?.address ? (
+              <p className="whitespace-pre-wrap text-xs text-muted-foreground">
+                {business.address}
+              </p>
+            ) : null}
           </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -190,8 +201,20 @@ export default async function InvoiceDetailPage({
             </tbody>
             <tfoot>
               <tr className="border-t">
-                <td className="pt-4 text-sm font-semibold">Total</td>
-                <td className="pt-4 text-right text-lg font-semibold tabular-nums">
+                <td className="pt-4 text-sm text-muted-foreground">Subtotal</td>
+                <td className="pt-4 text-right text-sm tabular-nums text-muted-foreground">
+                  {formatMoney(invoice.subtotal, business?.currency)}
+                </td>
+              </tr>
+              <tr>
+                <td className="pt-1 text-sm text-muted-foreground">GST (10%)</td>
+                <td className="pt-1 text-right text-sm tabular-nums text-muted-foreground">
+                  {formatMoney(invoice.gst_amount, business?.currency)}
+                </td>
+              </tr>
+              <tr className="border-t">
+                <td className="pt-3 text-sm font-semibold">Total (inc. GST)</td>
+                <td className="pt-3 text-right text-lg font-semibold tabular-nums">
                   {formatMoney(invoice.amount, business?.currency)}
                 </td>
               </tr>

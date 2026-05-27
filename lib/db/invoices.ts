@@ -119,13 +119,21 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
 
   const invoice_number = await nextInvoiceNumber(business.id);
 
+  // Calculate GST (10% inclusive — Australian standard).
+  // amount is the grand total; subtotal is amount / 1.1; gst is the remainder.
+  const total = job.price ?? 0;
+  const subtotal = Math.round((total / 1.1) * 100) / 100;
+  const gst_amount = Math.round((total - subtotal) * 100) / 100;
+
   const { data, error } = await supabase
     .from("invoices")
     .insert({
       business_id: business.id,
       job_id: jobId,
       invoice_number,
-      amount: job.price ?? 0,
+      subtotal,
+      gst_amount,
+      amount: total,
       status: "draft" as InvoiceStatus,
     })
     .select("*")

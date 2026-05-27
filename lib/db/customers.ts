@@ -91,5 +91,14 @@ export async function updateCustomer(
 export async function deleteCustomer(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("customers").delete().eq("id", id);
+
+  // 23503 = foreign_key_violation — customer has job history and cannot be
+  // deleted. Surface a friendly message instead of a raw Postgres error.
+  if (error?.code === "23503") {
+    throw new Error(
+      "This customer has job history and cannot be deleted. Remove their jobs first.",
+    );
+  }
+
   if (error) throw error;
 }

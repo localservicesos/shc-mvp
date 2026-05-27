@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
+import { dayRangeUtc } from "@/lib/utils/date";
 import type {
   Job,
   JobInput,
@@ -21,8 +22,9 @@ const RELATIONS =
 
 export type ListJobsFilters = {
   status?: JobStatus | "all";
-  from?: string;
-  to?: string;
+  from?: string;       // local calendar date YYYY-MM-DD in the business timezone
+  to?: string;         // local calendar date YYYY-MM-DD in the business timezone
+  timezone?: string;   // business timezone — required when from/to are used
   customerId?: string;
 };
 
@@ -40,10 +42,14 @@ export async function listJobs(
     query = query.eq("status", filters.status);
   }
   if (filters.from) {
-    query = query.gte("scheduled_start", `${filters.from}T00:00:00Z`);
+    const tz = filters.timezone ?? "Australia/Brisbane";
+    const { startUtc } = dayRangeUtc(tz, filters.from);
+    query = query.gte("scheduled_start", startUtc);
   }
   if (filters.to) {
-    query = query.lte("scheduled_start", `${filters.to}T23:59:59Z`);
+    const tz = filters.timezone ?? "Australia/Brisbane";
+    const { endUtc } = dayRangeUtc(tz, filters.to);
+    query = query.lte("scheduled_start", endUtc);
   }
   if (filters.customerId) {
     query = query.eq("customer_id", filters.customerId);
@@ -122,6 +128,11 @@ export async function updateJob(
 export async function deleteJob(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").delete().eq("id", id);
+  if (error?.code === "23503") {
+    throw new Error(
+      "This job has an invoice. Void or delete the invoice first, then delete the job.",
+    );
+  }
   if (error) throw error;
 }
 

@@ -7,6 +7,11 @@ export type CurrentBusiness = {
   timezone: string;
   currency: string;
   role: "owner" | "staff";
+  abn: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  logo_url: string | null;
 };
 
 /**
@@ -22,7 +27,7 @@ export async function getCurrentBusiness(): Promise<CurrentBusiness | null> {
   const { data, error } = await supabase
     .from("business_members")
     .select(
-      "role, businesses ( id, name, slug, timezone, currency )",
+      "role, businesses ( id, name, slug, timezone, currency, abn, email, phone, address, logo_url )",
     )
     .limit(1)
     .maybeSingle();
@@ -44,5 +49,10 @@ export async function getCurrentBusiness(): Promise<CurrentBusiness | null> {
     timezone: business.timezone,
     currency: business.currency,
     role: data.role,
+    abn: business.abn ?? null,
+    email: business.email ?? null,
+    phone: business.phone ?? null,
+    address: business.address ?? null,
+    logo_url: business.logo_url ?? null,
   };
 }

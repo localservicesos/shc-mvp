@@ -16,6 +16,7 @@ import {
   listJobs,
   type JobStatus,
 } from "@/lib/db/jobs";
+import { getCurrentBusiness } from "@/lib/db/current-business";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
 
@@ -51,7 +52,10 @@ export default async function JobsPage({
   const from = params.from;
   const to = params.to;
 
-  const jobs = await listJobs({ status, from, to });
+  const business = await getCurrentBusiness();
+  const timezone = business?.timezone ?? "Australia/Brisbane";
+
+  const jobs = await listJobs({ status, from, to, timezone });
 
   return (
     <div className="space-y-6">

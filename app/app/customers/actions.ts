@@ -37,8 +37,15 @@ export async function updateCustomerAction(id: string, formData: FormData) {
   redirect(`/app/customers/${id}`);
 }
 
-export async function deleteCustomerAction(id: string) {
-  await deleteCustomer(id);
+export async function deleteCustomerAction(
+  id: string,
+  _prev: { error?: string },
+): Promise<{ error?: string }> {
+  try {
+    await deleteCustomer(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to delete customer." };
+  }
   revalidatePath("/app/customers");
   redirect("/app/customers");
 }

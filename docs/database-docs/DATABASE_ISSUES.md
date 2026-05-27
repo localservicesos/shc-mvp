@@ -2,13 +2,16 @@
 
 > Full audit of `supabase/migrations/0001_init.sql`, `supabase/seed.sql`, and
 > the application DB layer in `lib/db/`. Issues are grouped by severity.
+>
+> **Legend:** ✅ Fixed · 🔴 Critical · 🟠 Important · 🟡 Missing · 🔵 Future SaaS
 
 ---
 
 ## 🔴 CRITICAL — Fix before going live
 
 ### 1. No INSERT policy on `businesses` (RLS gap)
-**File:** `0001_init.sql` lines 247–254
+**File:** `0001_init.sql` lines 247–254  
+**Status:** ⏭️ Skipped — single-business MVP; seed runs as service role
 
 The migration creates `SELECT` and `UPDATE` policies for `businesses` — but
 **no `INSERT` policy**. The seed works because it runs as a superuser (service
@@ -25,7 +28,8 @@ create policy "businesses can be created by authenticated users"
 ---
 
 ### 2. No INSERT / UPDATE / DELETE policies on `business_members` (RLS gap)
-**File:** `0001_init.sql` lines 258–260
+**File:** `0001_init.sql` lines 258–260  
+**Status:** ⏭️ Skipped — single-business MVP; seed runs as service role
 
 Only a `SELECT` policy exists. The consequence:
 - Adding a staff member via the client API **will fail**.
@@ -45,40 +49,26 @@ create policy "members can be deleted by owner"
 
 ---
 
-### 3. Race condition: duplicate invoices possible
-**Files:** `0001_init.sql`, `lib/db/invoices.ts` lines 108–110
+### 3. ✅ Race condition: duplicate invoices possible
+**Files:** `supabase/migrations/0003_invoices_job_unique.sql`, `lib/db/invoices.ts`  
+**Fixed in:** commit `e183b5a` (migration) + `665f93c` (app layer)
 
-The app guards against double-invoicing with an app-level check:
-```ts
-const existing = await getInvoiceByJob(jobId);
-if (existing) return existing;
-```
-But **two simultaneous requests** can both pass this check before either
-inserts a row, producing two invoices for the same job. The DB has no
-`UNIQUE` constraint on `invoices.job_id`.
-
-**Fix:** Add a unique constraint at the DB level:
-```sql
-alter table invoices add constraint invoices_job_id_uk unique (job_id);
-```
-This turns the race into a safe DB error instead of silent duplicate data.
+Added `UNIQUE` constraint on `invoices.job_id` at the DB level. Also added a
+`23505` (unique_violation) catch in `createInvoiceForJob` to gracefully handle
+the race — returns the winning concurrent insert instead of throwing.
 
 ---
 
 ### 4. Race condition: duplicate invoice numbers possible
-**File:** `lib/db/invoices.ts` lines 82–100
+**File:** `lib/db/invoices.ts` lines 82–100  
+**Status:** ⏳ Deferred — acceptable for single-user MVP
 
 `nextInvoiceNumber()` reads the latest invoice then increments in application
 code. Under concurrent load, two requests can read the same "latest" and
-generate the **same `INV-XXXX` number**. The unique constraint on
-`(business_id, invoice_number)` will catch it as a DB error — but the user
-gets a raw 500 instead of a graceful retry.
+generate the **same `INV-XXXX` number**.
 
-**Fix (MVP):** Add a DB-level sequence or a `SECURITY DEFINER` function so the
-number is generated atomically:
+**Fix (future):** Replace with a `SECURITY DEFINER` Postgres function or sequence:
 ```sql
-create sequence invoice_number_seq start 1;
-
 create or replace function next_invoice_number(p_business_id uuid)
 returns text language plpgsql security definer as $$
 declare v_next int;
@@ -95,22 +85,20 @@ $$;
 ---
 
 ### 5. `markInvoiceSent / Paid / Void` have no status guard (app layer)
-**File:** `lib/db/invoices.ts` lines 138–175
+**File:** `lib/db/invoices.ts` lines 138–175  
+**Status:** ⏭️ Skipped — UI already shows/hides buttons based on current status
 
 Any invoice can be transitioned to any status without checking the current
-state. This allows:
-- `void → paid` (legally problematic)
-- `draft → paid` (skipping `sent`)
-- `paid → sent` (reverting a completed payment)
+state. The UI prevents invalid transitions (e.g. `void → paid`) by only
+rendering the relevant action buttons. A direct API call would still bypass this.
 
-**Fix:** Add a status transition check:
+**Fix (future):**
 ```ts
-// Before updating, verify the transition is valid:
 const validTransitions: Record<InvoiceStatus, InvoiceStatus[]> = {
   draft: ['sent', 'void'],
   sent:  ['paid', 'void'],
-  paid:  [],          // terminal — no transitions out
-  void:  [],          // terminal — no transitions out
+  paid:  [],   // terminal
+  void:  [],   // terminal
 };
 ```
 
@@ -119,7 +107,8 @@ const validTransitions: Record<InvoiceStatus, InvoiceStatus[]> = {
 ## 🟠 DATA INTEGRITY — Fix soon
 
 ### 6. `vehicles.business_id` is denormalized and can drift
-**File:** `0001_init.sql` line 116
+**File:** `0001_init.sql` line 116  
+**Status:** 🟠 Not fixed
 
 `vehicles.business_id` should always equal
 `customers(customer_id).business_id`, but there is **no CHECK constraint or
@@ -127,39 +116,33 @@ trigger** enforcing this. A bug could insert a vehicle with a different
 `business_id` than its customer. The result: the vehicle becomes invisible to
 the business (RLS scope mismatch) but is still referenced by the customer.
 
-**Fix:** Add a trigger or generated column that derives `business_id` from the
-customer, or at minimum add a CHECK constraint via a function.
+Same problem applies to **`job_photos.business_id`**.
 
-Same problem applies to **`job_photos.business_id`** (should always equal
-`jobs(job_id).business_id`).
+**Fix (future):** Add a trigger or generated column that derives `business_id` from
+the customer.
 
 ---
 
-### 7. `vehicles.plate` has no UNIQUE constraint
-**File:** `0001_init.sql` line 130
+### 7. ✅ `vehicles.plate` has no UNIQUE constraint
+**File:** `supabase/migrations/0005_data_quality_constraints.sql`  
+**Fixed in:** commit `e183b5a`
 
-There is a regular index on `(business_id, plate)` — but it is **not unique**.
-Two vehicles with the same plate can exist in the same business, which would
-cause confusion and incorrect lookups.
-
-**Fix:**
+Replaced the non-unique `vehicles_plate_idx` with a partial unique index:
 ```sql
--- Replace the existing index with a partial unique index:
-drop index vehicles_plate_idx;
 create unique index vehicles_plate_uk
   on vehicles (business_id, lower(plate))
   where plate is not null;
 ```
+Case-insensitive match; `NULL` plates are excluded (a vehicle without a plate
+is valid and should not conflict).
 
 ---
 
-### 8. No CHECK on `scheduled_end > scheduled_start`
-**File:** `0001_init.sql` lines 162–175
+### 8. ✅ No CHECK on `scheduled_end > scheduled_start`
+**File:** `supabase/migrations/0005_data_quality_constraints.sql`  
+**Fixed in:** commit `e183b5a`
 
-A job can be inserted where `scheduled_end` is earlier than `scheduled_start`.
-The DB will happily store it.
-
-**Fix:**
+Added a CHECK constraint:
 ```sql
 alter table jobs add constraint jobs_schedule_order_chk
   check (scheduled_end is null or scheduled_start is null
@@ -168,87 +151,82 @@ alter table jobs add constraint jobs_schedule_order_chk
 
 ---
 
-### 9. `deleteCustomer` will surface a raw Postgres error to the user
-**File:** `lib/db/customers.ts` line 91–95
+### 9. ✅ `deleteCustomer` surfaces raw FK error to the user
+**Files:** `lib/db/customers.ts`, `app/app/customers/[id]/_components/delete-customer-button.tsx`  
+**Fixed in:** commit `503db08`
 
-`jobs.customer_id` is `ON DELETE RESTRICT`. If a customer has any job history
-and the user tries to delete them, the DB throws a foreign key violation.
-This error propagates as an unhandled exception to the UI.
+Added `23503` (foreign_key_violation) catch in `deleteCustomer` with a friendly
+message: *"This customer has job history and cannot be deleted. Remove their jobs first."*
 
-**Fix:** Catch the FK violation in `deleteCustomer` and return a typed error:
-```ts
-export async function deleteCustomer(id: string): Promise<{ error?: string }> {
-  const { error } = await supabase.from("customers").delete().eq("id", id);
-  if (error?.code === "23503") {
-    return { error: "Cannot delete a customer who has job history." };
-  }
-  if (error) throw error;
-  return {};
-}
-```
+Created `DeleteCustomerButton` client component using `useActionState` to
+display the error inline below the delete button — no more crash or raw 500.
 
 ---
 
-### 10. Date filters in `listJobs` hardcode UTC offset
-**File:** `lib/db/jobs.ts` lines 43–46
+### 9b. ✅ `deleteJob` surfaces raw FK error when job has an invoice
+**Files:** `lib/db/jobs.ts`, `app/app/jobs/actions.ts`, `app/app/jobs/[id]/_components/delete-job-button.tsx`  
+**Fixed in:** commit `142853d`
 
-```ts
-query = query.gte("scheduled_start", `${filters.from}T00:00:00Z`);
-query = query.lte("scheduled_start", `${filters.to}T23:59:59Z`);
-```
+Same pattern as Issue #9. `invoices.job_id` is `ON DELETE RESTRICT` — deleting
+a job with an invoice crashed the page. Added:
+- `23503` catch in `deleteJob` → friendly message: *"This job has an invoice. Void or delete the invoice first."*
+- `DeleteJobButton` component with inline error display.
 
-The business timezone is `Australia/Brisbane` (UTC+10, no DST). A job
-scheduled at 08:00 Brisbane time is stored as `2024-01-01T22:00:00Z` (previous
-UTC day). Filtering "today" from the Brisbane UI using `T00:00:00Z` will
-**miss jobs in the first 10 hours of the Brisbane day**.
+> Note: `job_photos` already uses `ON DELETE CASCADE`, so photos are safely
+> auto-deleted when their job is deleted. Only the invoice FK was the problem.
 
-**Fix:** Convert the local date to UTC using the business timezone before
-filtering, or filter using the business's UTC offset.
+---
+
+### 10. ✅ Date filters in `listJobs` hardcode UTC offset
+**Files:** `lib/db/jobs.ts`, `app/app/jobs/page.tsx`  
+**Fixed in:** commit `503db08`
+
+The hardcoded `T00:00:00Z` / `T23:59:59Z` suffix missed Brisbane jobs in the
+first 10 hours of the day (UTC+10). Fixed by passing `timezone` through
+`ListJobsFilters` and calling `dayRangeUtc(tz, date)` to convert local dates to
+correct UTC boundaries before filtering.
 
 ---
 
 ## 🟡 MISSING FIELDS
 
-### 11. `businesses` is missing Australian legal requirements
-Australian tax law (ATO) requires the following on every tax invoice:
+### 11. ✅ `businesses` missing Australian legal requirements
+**File:** `supabase/migrations/0004_businesses_contact_fields.sql`  
+**Fixed in:** commit `503db08`
 
-| Missing field | Why it matters |
+Added `abn`, `email`, `phone`, `address`, `logo_url` columns. Invoice detail
+page (`app/app/invoices/[id]/page.tsx`) now renders these fields in the "From"
+section.
+
+| Field | Why it matters |
 |---|---|
-| `abn text` | ABN must appear on all tax invoices over $82.50 |
+| `abn text` | ABN must appear on all tax invoices over $82.50 (ATO requirement) |
 | `email text` | Invoice "from" address |
 | `phone text` | Contact on invoice |
 | `address text` | Business address on invoice |
-| `logo_url text` | Already rendered in the sidebar — but not stored in DB |
-
-```sql
-alter table businesses
-  add column abn      text,
-  add column email    text,
-  add column phone    text,
-  add column address  text,
-  add column logo_url text;
-```
+| `logo_url text` | Already rendered in sidebar — now stored in DB |
 
 ---
 
-### 12. `invoices` is missing GST and standard invoice fields
-Australian GST (10%) is legally required on invoices for GST-registered
-businesses. The current schema has a flat `amount` with no breakdown.
+### 12. ✅ `invoices` missing GST breakdown (partial fix)
+**File:** `supabase/migrations/0006_invoices_gst.sql`  
+**Fixed in:** commit `665f93c`
 
-| Missing field | Why it matters |
-|---|---|
-| `subtotal numeric(10,2)` | Pre-GST amount |
-| `gst_amount numeric(10,2)` | 10% GST — legally required |
-| `due_date date` | Standard on invoices; needed for payment terms |
-| `notes text` | Terms, bank details, thank-you message |
+Added `subtotal` (pre-GST amount) and `gst_amount` (10% GST) columns.
+`createInvoiceForJob` now calculates them from `job.price`. Invoice page now
+shows Subtotal / GST (10%) / Total (inc. GST) line items.
+
+Existing rows back-filled: `subtotal = round(amount / 1.1, 2)`.
+
+**Still missing:** `due_date date`, `notes text` — deferred to next iteration.
 
 ---
 
 ### 13. `services` is missing `duration_minutes`
-Without a duration, the app cannot:
-- Auto-calculate `scheduled_end` from `scheduled_start` when creating a job.
-- Prevent double-booking on the same time slot.
-- Show accurate blocks on a future calendar view.
+**Status:** 🟡 Not fixed
+
+Without a duration, the app cannot auto-calculate `scheduled_end` or prevent
+double-booking.
 
 ```sql
 alter table services add column duration_minutes int not null default 60;
@@ -257,10 +235,10 @@ alter table services add column duration_minutes int not null default 60;
 ---
 
 ### 14. `jobs` is missing `completed_at`
-When a job transitions to `completed`, only `updated_at` changes — which also
-changes on any edit. There is no dedicated timestamp for when the job was
-actually finished. This makes reporting ("how long do jobs take on average?")
-unreliable.
+**Status:** 🟡 Not fixed
+
+Only `updated_at` changes when a job is completed — unreliable for reporting
+average job duration.
 
 ```sql
 alter table jobs add column completed_at timestamptz;
@@ -269,8 +247,7 @@ alter table jobs add column completed_at timestamptz;
 ---
 
 ### 15. `jobs` has no `cancellation_reason`
-When a job is cancelled, there is no field to record why. This is useful for
-spotting patterns (e.g. customer no-shows, weather).
+**Status:** 🟡 Not fixed
 
 ```sql
 alter table jobs add column cancellation_reason text;
@@ -281,80 +258,42 @@ alter table jobs add column cancellation_reason text;
 ## 🔵 FUTURE SAAS RISKS
 
 ### 16. No soft delete on any table
-All deletes are permanent (`CASCADE` or `RESTRICT`). There is no `deleted_at`
-column anywhere. Consequences:
-- A misclick deletes a customer forever.
-- No "trash / undo" UX is possible.
-- Audit trails for accounting are impossible.
+All deletes are permanent. No `deleted_at` column anywhere.
+A misclick deletes a customer forever; no undo, no accounting audit trail.
 
 **Future migration pattern:**
 ```sql
 alter table customers add column deleted_at timestamptz;
--- Update RLS to add: and deleted_at is null
--- Update queries to filter: .is("deleted_at", null)
+-- Update RLS: and deleted_at is null
+-- Update queries: .is("deleted_at", null)
 ```
 
 ---
 
 ### 17. `job_status` and `invoice_status` are Postgres enums
-Adding a new value to a Postgres enum (e.g. `on_hold`) requires:
-```sql
-ALTER TYPE job_status ADD VALUE 'on_hold';
-```
-This **cannot be run inside a transaction**, making it risky in a migration
-pipeline. If the migration fails partway through, rollback is not possible.
+Adding a new value requires `ALTER TYPE ... ADD VALUE`, which **cannot run
+inside a transaction** — making rollback impossible if a migration fails.
 
-**Alternative:** Use `text` with a `CHECK` constraint — easier to migrate,
-same validation:
-```sql
-status text not null default 'booked'
-  check (status in ('booked','in_progress','ready','completed','cancelled'))
-```
+**Alternative:** `text` with a `CHECK` constraint — easier to migrate, same validation.
 
 ---
 
 ### 18. `business_members.role` is not enforced by RLS
-All operational table policies use a single `FOR ALL` policy — meaning a
-`staff` member has the **same read/write access as the `owner`**. The `role`
-column is stored but never checked.
-
-When staff permissions matter (e.g. staff can't void invoices or delete
-customers), the policies will need to be split into per-action policies:
-```sql
--- Example future pattern:
-create policy "only owners can delete customers"
-  on customers for delete
-  using (
-    exists (
-      select 1 from business_members
-      where user_id = auth.uid()
-        and business_id = customers.business_id
-        and role = 'owner'
-    )
-  );
-```
+All operational table policies use `FOR ALL` — a `staff` member has the same
+access as the `owner`. The `role` column is stored but never checked.
 
 ---
 
 ### 19. Service pricing model doesn't scale
 The seed encodes vehicle size as a name suffix (e.g. `"Basic Wash — SUV"`).
-With 17 rows for one business, this will grow unwieldy. There is no concept of:
-- Pricing tiers per vehicle category
-- Add-on services linked to a base service
-- Service packages
-
-This is an MVP trade-off — but the `services` table will need a `category`
-or `parent_id` column before adding a second service-type business.
+No concept of pricing tiers, add-ons, or service packages.
 
 ---
 
 ### 20. No audit log
-For a business handling invoices and payments, there is no record of:
-- Who changed invoice status from `sent` to `paid`
-- Who deleted a customer
-- When a job price was last changed
+No record of who changed invoice status, who deleted a customer, or when a
+job price was last changed.
 
-**Future table:**
 ```sql
 create table audit_log (
   id          uuid primary key default gen_random_uuid(),
@@ -373,25 +312,26 @@ create table audit_log (
 
 ## Summary table
 
-| # | Severity | Issue | Effort |
+| # | Severity | Issue | Status |
 |---|---|---|---|
-| 1 | 🔴 Critical | No INSERT RLS on `businesses` | XS |
-| 2 | 🔴 Critical | No INSERT/UPDATE/DELETE RLS on `business_members` | XS |
-| 3 | 🔴 Critical | Duplicate invoice race condition (no DB unique on `job_id`) | XS |
-| 4 | 🔴 Critical | Invoice number race condition in app code | S |
-| 5 | 🔴 Critical | Invoice status transitions not guarded | S |
-| 6 | 🟠 Important | Denormalized `business_id` can drift on vehicles & photos | M |
-| 7 | 🟠 Important | `vehicles.plate` not unique | XS |
-| 8 | 🟠 Important | No CHECK on `scheduled_end > scheduled_start` | XS |
-| 9 | 🟠 Important | `deleteCustomer` surfaces raw FK error | XS |
-| 10 | 🟠 Important | Date filters ignore business timezone | S |
-| 11 | 🟡 Missing | `businesses` missing ABN, email, phone, address, logo | S |
-| 12 | 🟡 Missing | `invoices` missing GST, due date, notes | S |
-| 13 | 🟡 Missing | `services` missing `duration_minutes` | XS |
-| 14 | 🟡 Missing | `jobs` missing `completed_at` | XS |
-| 15 | 🟡 Missing | `jobs` missing `cancellation_reason` | XS |
-| 16 | 🔵 Future | No soft delete anywhere | L |
-| 17 | 🔵 Future | Enum types are hard to migrate | M |
-| 18 | 🔵 Future | `role` not enforced by RLS | M |
-| 19 | 🔵 Future | Service pricing model doesn't scale | L |
-| 20 | 🔵 Future | No audit log | L |
+| 1 | 🔴 Critical | No INSERT RLS on `businesses` | ⏭️ Skipped (single-user MVP) |
+| 2 | 🔴 Critical | No INSERT/UPDATE/DELETE RLS on `business_members` | ⏭️ Skipped (single-user MVP) |
+| 3 | 🔴 Critical | Duplicate invoice race condition | ✅ Fixed — `0003` migration + app layer |
+| 4 | 🔴 Critical | Invoice number race condition in app code | ⏳ Deferred |
+| 5 | 🔴 Critical | Invoice status transitions not guarded | ⏭️ Skipped (UI guards transitions) |
+| 6 | 🟠 Important | Denormalized `business_id` can drift on vehicles & photos | 🟠 Not fixed |
+| 7 | 🟠 Important | `vehicles.plate` not unique | ✅ Fixed — `0005` migration |
+| 8 | 🟠 Important | No CHECK on `scheduled_end > scheduled_start` | ✅ Fixed — `0005` migration |
+| 9 | 🟠 Important | `deleteCustomer` surfaces raw FK error | ✅ Fixed — `DeleteCustomerButton` |
+| 9b | 🟠 Important | `deleteJob` crashes when job has an invoice | ✅ Fixed — `DeleteJobButton` |
+| 10 | 🟠 Important | Date filters ignore business timezone | ✅ Fixed — `dayRangeUtc()` |
+| 11 | 🟡 Missing | `businesses` missing ABN, email, phone, address, logo | ✅ Fixed — `0004` migration |
+| 12 | 🟡 Missing | `invoices` missing GST breakdown | ✅ Partial — `0006` migration (due_date/notes deferred) |
+| 13 | 🟡 Missing | `services` missing `duration_minutes` | 🟡 Not fixed |
+| 14 | 🟡 Missing | `jobs` missing `completed_at` | 🟡 Not fixed |
+| 15 | 🟡 Missing | `jobs` missing `cancellation_reason` | 🟡 Not fixed |
+| 16 | 🔵 Future | No soft delete anywhere | 🔵 Future |
+| 17 | 🔵 Future | Enum types are hard to migrate | 🔵 Future |
+| 18 | 🔵 Future | `role` not enforced by RLS | 🔵 Future |
+| 19 | 🔵 Future | Service pricing model doesn't scale | 🔵 Future |
+| 20 | 🔵 Future | No audit log | 🔵 Future |

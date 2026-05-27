@@ -78,8 +78,15 @@ export async function updateJobAction(id: string, formData: FormData) {
   redirect(`/app/jobs/${id}`);
 }
 
-export async function deleteJobAction(id: string) {
-  await deleteJob(id);
+export async function deleteJobAction(
+  id: string,
+  _prev: { error?: string },
+): Promise<{ error?: string }> {
+  try {
+    await deleteJob(id);
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Failed to delete job." };
+  }
   revalidatePath("/app/jobs");
   redirect("/app/jobs");
 }

@@ -6,16 +6,16 @@ What we are doing now, what comes next for Raphael, and what shapes the future S
 
 Operational web app replacing Raphael's paper notebook.
 
-- [ ] Auth (email + password via Supabase Auth) and `proxy.ts` session gate
-- [ ] App layout + side navigation
-- [ ] Customers CRUD
-- [ ] Vehicles linked to customers
-- [ ] Services CRUD
-- [ ] Jobs CRUD with status flow (`booked` → `in_progress` → `ready` → `completed` / `cancelled`)
-- [ ] Dashboard (today, upcoming, in-progress, ready, quick "new job")
-- [ ] Schedule view (daily / weekly list)
-- [ ] Job detail with photo upload + notes
-- [ ] Invoice generation from a job, mark sent, mark paid, printable page
+- [x] Auth (email + password via Supabase Auth) and `proxy.ts` session gate
+- [x] App layout + side navigation
+- [x] Customers CRUD (with FK-safe delete + inline error)
+- [x] Vehicles linked to customers (unique plate per business)
+- [x] Services CRUD
+- [x] Jobs CRUD with status flow (`booked` → `in_progress` → `ready` → `completed` / `cancelled`)
+- [x] Dashboard (today, upcoming, in-progress, ready, quick "new job")
+- [x] Schedule view (daily / weekly list with correct Brisbane timezone)
+- [x] Job detail with photo upload + notes (FK-safe delete + inline error)
+- [x] Invoice generation from a job, mark sent, mark paid, printable page (with GST breakdown)
 
 ## Later — quality of life for Raphael (post-MVP, same business)
 
