@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,8 +15,8 @@ import { getInvoiceByJob } from "@/lib/db/invoices";
 import { listJobPhotos } from "@/lib/db/job-photos";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
-import { deleteJobAction } from "../actions";
 import { generateInvoiceFromJobAction } from "@/app/app/invoices/actions";
+import { DeleteJobButton } from "./_components/delete-job-button";
 import { uploadJobPhotoAction } from "./photos/actions";
 import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
 import { PhotoUploader } from "@/components/jobs/photo-uploader";
@@ -81,17 +81,7 @@ export default async function JobDetailPage({
               Edit
             </Link>
           </Button>
-          <form action={deleteJobAction.bind(null, job.id)}>
-            <Button
-              type="submit"
-              size="icon"
-              variant="destructive"
-              aria-label="Delete job"
-              title="Delete job"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </form>
+          <DeleteJobButton jobId={job.id} />
         </div>
       </div>
 

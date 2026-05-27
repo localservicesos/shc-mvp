@@ -128,6 +128,11 @@ export async function updateJob(
 export async function deleteJob(id: string): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").delete().eq("id", id);
+  if (error?.code === "23503") {
+    throw new Error(
+      "This job has an invoice. Void or delete the invoice first, then delete the job.",
+    );
+  }
   if (error) throw error;
 }
 
