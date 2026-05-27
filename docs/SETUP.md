@@ -6,7 +6,6 @@ This project uses **bun** as its package manager and **Next.js 16** with the App
 
 - [Bun](https://bun.sh) `>= 1.3`
 - A Supabase project (free tier is fine) — https://supabase.com
-- (Optional) The Supabase CLI for applying migrations and managing local environments — https://supabase.com/docs/guides/cli
 
 ## 1. Install dependencies
 
@@ -18,52 +17,70 @@ Always use `bun` — never `npm`, `pnpm`, or `yarn`. Only `bun.lockb` is committ
 
 ## 2. Configure environment variables
 
-Copy the example file and fill in values from your Supabase project (Dashboard → Project Settings → API):
-
 ```bash
-cp .env.example .env.local
+cp .env.local.example .env.local
 ```
 
-| Variable                          | Where it runs | Notes |
-| --------------------------------- | ------------- | ----- |
-| `NEXT_PUBLIC_SUPABASE_URL`        | client + server | Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | client + server | Anon key, safe to expose |
-| `SUPABASE_SERVICE_ROLE_KEY`       | server only   | **Never** import from client code |
+Fill in your values from the Supabase Dashboard:
 
-`.env.local` is gitignored. The only env file committed is `.env.example`.
+| Variable | Where to find it | Used by |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Settings → API → Project URL | App (client + server) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Settings → API → anon / public | App (client + server) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Settings → API → service_role | Server scripts only — **never expose in browser** |
+| `DATABASE_URL` | Settings → Database → Connection string (URI) | `bun run migrate:*` scripts only |
 
-## 3. Apply the database migration
+`.env.local` is gitignored. Only `.env.local.example` is committed.
 
-The schema lives in `supabase/migrations/0001_init.sql`. You can apply it in two ways.
+## 3. Apply database migrations
 
-### Option A — Supabase CLI (recommended once we add it)
+Migrations live in `supabase/migrations/` and are tracked in a `schema_migrations` table.
+
+### Check what's applied
 
 ```bash
-supabase db push
+bun run migrate:status
 ```
 
-### Option B — Copy/paste into the SQL editor
+Example output:
+```
+  Migration status
+  ────────────────────────────────────
+  ✅  applied   0001_init.sql
+  ✅  applied   0002_job_photos_storage.sql
+  ✅  applied   0003_invoices_job_unique.sql
+  ❌  PENDING   0004_businesses_contact_fields.sql
+  ❌  PENDING   0005_data_quality_constraints.sql
+  ────────────────────────────────────
+  ⚠️  2 pending. Run: bun run migrate:run
+```
 
-1. Open your project in the Supabase Dashboard.
-2. SQL Editor → New query.
-3. Paste the contents of `supabase/migrations/0001_init.sql` and run it.
+### Apply pending migrations
+
+```bash
+bun run migrate:run
+```
+
+This runs each pending `.sql` file in order and records it in `schema_migrations`.
+If a migration fails, it stops and tells you which file and what the error was.
+
+> **First time only:** `DATABASE_URL` must be set in `.env.local`. Get it from:
+> Supabase Dashboard → Settings → Database → Connection string (URI)
+> Format: `postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres`
+
+### Adding a new migration
+
+1. Create `supabase/migrations/XXXX_description.sql` (increment the number prefix).
+2. Write your SQL.
+3. Run `bun run migrate:run` — the script picks it up automatically.
 
 ## 4. Seed the first business
 
-Until we automate this, manually create the first business and link your auth user as an owner. In the SQL editor:
+After applying migrations, seed the first business record:
 
-```sql
--- 1. Create the business
-insert into businesses (name, slug, timezone, currency)
-values ('Raphael Detailing', 'raphael-detailing', 'Australia/Brisbane', 'AUD')
-returning id;
-
--- 2. Link your auth user as owner (replace USER_UUID and BUSINESS_UUID).
-insert into business_members (user_id, business_id, role)
-values ('USER_UUID', 'BUSINESS_UUID', 'owner');
-```
-
-Your `auth.users` UUID is visible in Dashboard → Authentication → Users.
+1. Open **Supabase Dashboard → SQL Editor**.
+2. Paste and run the contents of `supabase/seed.sql`.
+3. Replace the placeholder UUIDs at the top with your actual auth user ID (Dashboard → Authentication → Users).
 
 ## 5. Run the dev server
 
@@ -71,7 +88,7 @@ Your `auth.users` UUID is visible in Dashboard → Authentication → Users.
 bun run dev
 ```
 
-The app is then available at http://localhost:3000.
+The app is available at http://localhost:3000.
 
 ## 6. Build / lint
 
@@ -89,8 +106,11 @@ lib/
   supabase/         browser, server, and proxy auth clients
   db/               query helpers
   utils/            general utilities
+scripts/
+  migrate.ts        migration runner (bun run migrate:status / migrate:run)
 supabase/
-  migrations/       SQL migrations (0001_init.sql is the schema)
+  migrations/       SQL migrations (numbered 0001_, 0002_, etc.)
+  seed.sql          first-business seed data
 types/              shared TypeScript types
 docs/               this folder
 ```
@@ -100,3 +120,4 @@ docs/               this folder
 - **Next.js 16 renamed `middleware.ts` to `proxy.ts`.** The auth session refresher lives in `lib/supabase/proxy.ts`; the root entrypoint will be `proxy.ts` (not `middleware.ts`). See `AGENTS.md`.
 - **`cookies()` is async.** Always `await cookies()` in server code.
 - **Never import `lib/supabase/server.ts` from a Client Component** — it uses `next/headers`. Use `lib/supabase/client.ts` in the browser.
+- **`DATABASE_URL` is only for the migration script.** It is never imported by the Next.js app. The app uses `NEXT_PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` only.
