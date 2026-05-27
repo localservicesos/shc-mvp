@@ -201,8 +201,20 @@ export default async function InvoiceDetailPage({
             </tbody>
             <tfoot>
               <tr className="border-t">
-                <td className="pt-4 text-sm font-semibold">Total</td>
-                <td className="pt-4 text-right text-lg font-semibold tabular-nums">
+                <td className="pt-4 text-sm text-muted-foreground">Subtotal</td>
+                <td className="pt-4 text-right text-sm tabular-nums text-muted-foreground">
+                  {formatMoney(invoice.subtotal, business?.currency)}
+                </td>
+              </tr>
+              <tr>
+                <td className="pt-1 text-sm text-muted-foreground">GST (10%)</td>
+                <td className="pt-1 text-right text-sm tabular-nums text-muted-foreground">
+                  {formatMoney(invoice.gst_amount, business?.currency)}
+                </td>
+              </tr>
+              <tr className="border-t">
+                <td className="pt-3 text-sm font-semibold">Total (inc. GST)</td>
+                <td className="pt-3 text-right text-lg font-semibold tabular-nums">
                   {formatMoney(invoice.amount, business?.currency)}
                 </td>
               </tr>

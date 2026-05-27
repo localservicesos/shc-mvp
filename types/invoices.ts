@@ -13,7 +13,9 @@ export type Invoice = {
   business_id: string;
   job_id: string;
   invoice_number: string;
-  amount: number;
+  subtotal: number;
+  gst_amount: number;
+  amount: number;       // grand total = subtotal + gst_amount
   status: InvoiceStatus;
   sent_at: string | null;
   paid_at: string | null;
