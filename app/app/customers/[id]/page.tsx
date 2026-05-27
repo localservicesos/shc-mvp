@@ -14,8 +14,8 @@ import { listJobsForCustomer } from "@/lib/db/jobs";
 import { formatScheduled } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
-import { deleteCustomerAction } from "../actions";
 import { deleteVehicleAction } from "./vehicles/actions";
+import { DeleteCustomerButton } from "./_components/delete-customer-button";
 
 export const metadata = {
   title: "Customer",
@@ -59,17 +59,7 @@ export default async function CustomerDetailPage({
               Edit
             </Link>
           </Button>
-          <form action={deleteCustomerAction.bind(null, customer.id)}>
-            <Button
-              type="submit"
-              variant="destructive"
-              size="icon"
-              aria-label="Delete customer"
-              title="Delete customer"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </form>
+          <DeleteCustomerButton customerId={customer.id} />
         </div>
       </div>
 
