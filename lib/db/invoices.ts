@@ -105,7 +105,7 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
 
   const supabase = await createClient();
 
-  // Refuse to duplicate — one invoice per job for the MVP.
+  // Fast-path: return existing invoice if already created.
   const existing = await getInvoiceByJob(jobId);
   if (existing) return existing;
 
@@ -130,6 +130,14 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
     })
     .select("*")
     .single();
+
+  // 23505 = unique_violation — a concurrent request already created the
+  // invoice between our check above and this insert. Return that invoice
+  // instead of throwing an error.
+  if (error?.code === "23505") {
+    const race = await getInvoiceByJob(jobId);
+    if (race) return race;
+  }
 
   if (error) throw error;
   return data as Invoice;
