@@ -111,9 +111,20 @@ export default async function InvoiceDetailPage({
               From
             </p>
             <p className="text-lg font-semibold">{business?.name ?? "—"}</p>
-            <p className="text-xs text-muted-foreground">
-              {business?.currency ?? "AUD"} · {business?.timezone}
-            </p>
+            {business?.abn ? (
+              <p className="text-xs text-muted-foreground">ABN {business.abn}</p>
+            ) : null}
+            {business?.phone ? (
+              <p className="text-xs text-muted-foreground">{business.phone}</p>
+            ) : null}
+            {business?.email ? (
+              <p className="text-xs text-muted-foreground">{business.email}</p>
+            ) : null}
+            {business?.address ? (
+              <p className="whitespace-pre-wrap text-xs text-muted-foreground">
+                {business.address}
+              </p>
+            ) : null}
           </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
