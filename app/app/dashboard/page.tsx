@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, CheckCircle2, Plus } from "lucide-react";
+import { CalendarClock, CheckCircle2, Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,6 +22,7 @@ import {
   dayRangeUtc,
   formatScheduled,
   formatTime,
+  monthRangeUtc,
   shiftDateString,
 } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
@@ -43,12 +44,27 @@ export default async function DashboardPage() {
     weekStart,
     7,
   );
+  const { startUtc: monthStartUtc, endUtc: monthEndUtc } = monthRangeUtc(
+    tz,
+    today,
+  );
 
-  const [todayJobs, booked, completedRecently] = await Promise.all([
-    listJobsBetween(todayStart, todayEnd),
-    listJobsByStatus("booked"),
-    listJobsBetween(weekStartUtc, weekEndUtc, { status: "completed" }),
-  ]);
+  const [todayJobs, booked, completedRecently, completedThisMonth] =
+    await Promise.all([
+      listJobsBetween(todayStart, todayEnd),
+      listJobsByStatus("booked"),
+      listJobsBetween(weekStartUtc, weekEndUtc, { status: "completed" }),
+      listJobsBetween(monthStartUtc, monthEndUtc, { status: "completed" }),
+    ]);
+
+  const monthIncome = completedThisMonth.reduce(
+    (sum, job) => sum + (job.price ?? 0),
+    0,
+  );
+  const monthLabel = new Intl.DateTimeFormat("en-AU", {
+    month: "long",
+    timeZone: tz,
+  }).format(new Date());
 
   return (
     <div className="space-y-6">
@@ -81,6 +97,31 @@ export default async function DashboardPage() {
           </Link>
         </Button>
       </div>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Wallet className="h-4 w-4" />
+            Income · {monthLabel}
+          </CardTitle>
+          <Link
+            href={`/app/jobs?status=completed&from=${today.slice(0, 7)}-01&to=${today}`}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            View completed →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <p className="text-3xl font-semibold tabular-nums">
+            {formatMoney(monthIncome, business?.currency ?? "AUD")}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {completedThisMonth.length}{" "}
+            {completedThisMonth.length === 1 ? "completed job" : "completed jobs"}{" "}
+            this month
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-3">
         <BucketCard
