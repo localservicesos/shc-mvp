@@ -49,6 +49,15 @@ function parseJobForm(formData: FormData): JobInput {
     ? (statusRaw as JobStatus)
     : "booked";
 
+  const cancellation_reason =
+    status === "cancelled"
+      ? optionalString(formData.get("cancellation_reason"))
+      : null;
+
+  if (status === "cancelled" && !cancellation_reason) {
+    throw new Error("Cancellation reason is required.");
+  }
+
   return {
     customer_id,
     vehicle_id: optionalString(formData.get("vehicle_id")),
@@ -58,6 +67,7 @@ function parseJobForm(formData: FormData): JobInput {
     status,
     price: optionalPrice(formData.get("price")),
     notes: optionalString(formData.get("notes")),
+    cancellation_reason,
   };
 }
 
@@ -98,7 +108,23 @@ export async function updateJobStatusAction(
   if (!JOB_STATUSES.includes(status)) {
     throw new Error("Invalid status.");
   }
-  await updateJob(id, { status });
+  // Clear cancellation_reason when moving out of cancelled.
+  const patch: Parameters<typeof updateJob>[1] = {
+    status,
+    ...(status !== "cancelled" && { cancellation_reason: null }),
+  };
+  await updateJob(id, patch);
+  revalidatePath("/app/jobs");
+  revalidatePath(`/app/jobs/${id}`);
+}
+
+export async function cancelJobAction(
+  id: string,
+  reason: string,
+): Promise<void> {
+  const trimmed = reason.trim();
+  if (!trimmed) throw new Error("Cancellation reason is required.");
+  await updateJob(id, { status: "cancelled", cancellation_reason: trimmed });
   revalidatePath("/app/jobs");
   revalidatePath(`/app/jobs/${id}`);
 }

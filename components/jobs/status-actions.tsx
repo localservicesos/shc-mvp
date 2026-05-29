@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { type JobStatus } from "@/lib/db/jobs";
 import { updateJobStatusAction } from "@/app/app/jobs/actions";
+import { CancelJobDialog } from "./cancel-job-dialog";
 
 export function JobStatusActions({
   id,
@@ -18,11 +19,7 @@ export function JobStatusActions({
               Mark as completed
             </Button>
           </form>
-          <form action={updateJobStatusAction.bind(null, id, "cancelled")}>
-            <Button type="submit" size="sm" variant="outline">
-              Cancel job
-            </Button>
-          </form>
+          <CancelJobDialog jobId={id} />
         </>
       ) : (
         <form action={updateJobStatusAction.bind(null, id, "booked")}>

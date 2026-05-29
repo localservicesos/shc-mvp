@@ -81,7 +81,7 @@ export default async function JobDetailPage({
               Edit
             </Link>
           </Button>
-          <DeleteJobButton jobId={job.id} />
+          <DeleteJobButton jobId={job.id} status={job.status} />
         </div>
       </div>
 
@@ -89,8 +89,20 @@ export default async function JobDetailPage({
         <CardHeader>
           <CardTitle className="text-base">Status</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           <JobStatusActions id={job.id} status={job.status} />
+          {job.status === "cancelled" ? (
+            <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-500/20 dark:bg-rose-500/10">
+              <p className="text-xs font-medium text-rose-700 dark:text-rose-400">
+                Cancellation reason
+              </p>
+              <p className="mt-0.5 text-sm text-rose-800 dark:text-rose-300">
+                {job.cancellation_reason ?? (
+                  <span className="italic opacity-60">No reason recorded.</span>
+                )}
+              </p>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
