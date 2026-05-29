@@ -154,6 +154,18 @@ export function formatMonthLabel(dateStr: string, tz: string): string {
   }).format(utcNoon);
 }
 
+/**
+ * Snap a "YYYY-MM-DD" date string back to the Sunday that starts its week.
+ * Used by the Schedule week view, which always runs Sunday → Saturday.
+ */
+export function startOfWeekString(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() - date.getUTCDay()); // getUTCDay: 0 = Sunday
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
 /** Shift a "YYYY-MM-DD" date string by N days (positive or negative). */
 export function shiftDateString(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);

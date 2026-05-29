@@ -22,6 +22,7 @@ import {
   monthGridDays,
   shiftDateString,
   shiftMonthString,
+  startOfWeekString,
 } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
 
@@ -55,7 +56,11 @@ export default async function SchedulePage({
   const tz = business?.timezone ?? "Australia/Brisbane";
   const today = dateInTimezone(tz);
   const view = parseView(params.view);
-  const startDate = params.date ?? today;
+  const selectedDate = params.date ?? today;
+  // The week view always runs Sunday → Saturday, so snap its anchor back to
+  // the Sunday of the selected week. Other views use the selected date as-is.
+  const startDate =
+    view === "week" ? startOfWeekString(selectedDate) : selectedDate;
 
   const year = Number(startDate.slice(0, 4));
 
