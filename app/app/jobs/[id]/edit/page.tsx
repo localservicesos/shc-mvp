@@ -82,6 +82,7 @@ export default async function EditJobPage({
               status: job.status,
               price: job.price !== null ? job.price.toString() : "",
               notes: job.notes ?? "",
+              cancellation_reason: job.cancellation_reason ?? "",
             }}
             showStatus
             submitLabel="Save changes"

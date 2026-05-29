@@ -32,6 +32,7 @@ export type JobFormValues = {
   status: JobStatus;
   price: string;
   notes: string;
+  cancellation_reason: string;
 };
 
 const EMPTY: JobFormValues = {
@@ -43,6 +44,7 @@ const EMPTY: JobFormValues = {
   status: "booked",
   price: "",
   notes: "",
+  cancellation_reason: "",
 };
 
 type JobFormProps = {
@@ -129,6 +131,11 @@ export function JobForm({
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (values.status === "cancelled" && !values.cancellation_reason.trim()) {
+      setError("Please enter a reason for cancelling.");
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
@@ -278,6 +285,26 @@ export function JobForm({
           <input type="hidden" name="status" value={values.status} />
         )}
       </div>
+
+      {values.status === "cancelled" ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="cancellation_reason">
+            Cancellation reason <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="cancellation_reason"
+            name="cancellation_reason"
+            rows={3}
+            placeholder="e.g. Customer rescheduled, vehicle not available…"
+            value={values.cancellation_reason}
+            onChange={(e) => setField("cancellation_reason", e.target.value)}
+            disabled={isPending}
+            className="border-rose-300 focus-visible:ring-rose-400"
+          />
+        </div>
+      ) : (
+        <input type="hidden" name="cancellation_reason" value="" />
+      )}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="notes">Notes</Label>

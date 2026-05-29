@@ -9,8 +9,6 @@ import type { Service } from "@/lib/db/services";
 
 export const JOB_STATUSES = [
   "booked",
-  "in_progress",
-  "ready",
   "completed",
   "cancelled",
 ] as const;
@@ -18,8 +16,6 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   booked: "Booked",
-  in_progress: "In progress",
-  ready: "Ready",
   completed: "Completed",
   cancelled: "Cancelled",
 };
@@ -35,6 +31,7 @@ export type Job = {
   status: JobStatus;
   price: number | null;
   notes: string | null;
+  cancellation_reason: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -57,4 +54,5 @@ export type JobInput = {
   status?: JobStatus;
   price?: number | null;
   notes?: string | null;
+  cancellation_reason?: string | null;
 };

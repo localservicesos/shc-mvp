@@ -113,6 +113,8 @@ export async function updateJob(
   if (input.status !== undefined) patch.status = input.status;
   if (input.price !== undefined) patch.price = input.price;
   if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.cancellation_reason !== undefined)
+    patch.cancellation_reason = input.cancellation_reason;
 
   const { data, error } = await supabase
     .from("jobs")
@@ -127,6 +129,17 @@ export async function updateJob(
 
 export async function deleteJob(id: string): Promise<void> {
   const supabase = await createClient();
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (job?.status === "completed") {
+    throw new Error("Completed jobs cannot be deleted.");
+  }
+
   const { error } = await supabase.from("jobs").delete().eq("id", id);
   if (error?.code === "23503") {
     throw new Error(
