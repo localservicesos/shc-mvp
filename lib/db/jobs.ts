@@ -2,6 +2,7 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import { dayRangeUtc } from "@/lib/utils/date";
+import { toTitleCase } from "@/lib/utils/format";
 import type {
   Job,
   JobInput,
@@ -19,6 +20,12 @@ export { JOB_STATUSES, JOB_STATUS_LABELS } from "@/types/jobs";
 
 const RELATIONS =
   "*, customer:customers(id, name), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, base_price)";
+
+/** Title-case the related customer name so it renders consistently everywhere. */
+function normalizeJob(job: JobWithRelations): JobWithRelations {
+  if (!job.customer) return job;
+  return { ...job, customer: { ...job.customer, name: toTitleCase(job.customer.name) } };
+}
 
 export type ListJobsFilters = {
   status?: JobStatus | "all";
@@ -57,7 +64,7 @@ export async function listJobs(
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as unknown as JobWithRelations[];
+  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
 }
 
 export async function getJob(id: string): Promise<JobWithRelations | null> {
@@ -69,7 +76,7 @@ export async function getJob(id: string): Promise<JobWithRelations | null> {
     .maybeSingle();
 
   if (error) throw error;
-  return (data ?? null) as unknown as JobWithRelations | null;
+  return data ? normalizeJob(data as unknown as JobWithRelations) : null;
 }
 
 export async function createJob(input: JobInput): Promise<Job> {
@@ -178,7 +185,7 @@ export async function listJobsBetween(
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as unknown as JobWithRelations[];
+  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
 }
 
 /** Jobs with the given status, optionally restricted to scheduled_start >= some UTC instant. */
@@ -199,5 +206,5 @@ export async function listJobsByStatus(
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []) as unknown as JobWithRelations[];
+  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
 }

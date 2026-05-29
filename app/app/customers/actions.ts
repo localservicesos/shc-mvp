@@ -8,16 +8,18 @@ import {
   updateCustomer,
   type CustomerInput,
 } from "@/lib/db/customers";
+import { toTitleCase } from "@/lib/utils/format";
 
 function parseCustomerForm(formData: FormData): CustomerInput {
-  const name = String(formData.get("name") ?? "").trim();
+  const name = toTitleCase(String(formData.get("name") ?? "").trim());
   if (!name) throw new Error("Name is required.");
 
   const fields = ["phone", "email", "address", "notes"] as const;
   const optional: Partial<CustomerInput> = {};
   for (const key of fields) {
     const value = String(formData.get(key) ?? "").trim();
-    optional[key] = value ? value : null;
+    const normalized = key === "address" ? toTitleCase(value) : value;
+    optional[key] = normalized ? normalized : null;
   }
   return { name, ...optional };
 }

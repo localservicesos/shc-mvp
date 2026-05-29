@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
+import { toTitleCase } from "@/lib/utils/format";
 import type { Customer } from "@/lib/db/customers";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Service } from "@/lib/db/services";
@@ -32,6 +33,23 @@ export type InvoiceWithRelations = Invoice & {
 const RELATIONS =
   "*, job:jobs(id, scheduled_start, scheduled_end, notes, price, customer:customers(id, name, phone, email, address), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, description))";
 
+/** Title-case the invoice's customer name and address for consistent display. */
+function normalizeInvoice(invoice: InvoiceWithRelations): InvoiceWithRelations {
+  const customer = invoice.job?.customer;
+  if (!customer) return invoice;
+  return {
+    ...invoice,
+    job: {
+      ...invoice.job!,
+      customer: {
+        ...customer,
+        name: toTitleCase(customer.name),
+        address: customer.address ? toTitleCase(customer.address) : customer.address,
+      },
+    },
+  };
+}
+
 export async function listInvoices(): Promise<InvoiceWithRelations[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -40,7 +58,7 @@ export async function listInvoices(): Promise<InvoiceWithRelations[]> {
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data ?? []) as unknown as InvoiceWithRelations[];
+  return ((data ?? []) as unknown as InvoiceWithRelations[]).map(normalizeInvoice);
 }
 
 export async function getInvoice(
@@ -54,7 +72,9 @@ export async function getInvoice(
     .maybeSingle();
 
   if (error) throw error;
-  return (data ?? null) as unknown as InvoiceWithRelations | null;
+  return data
+    ? normalizeInvoice(data as unknown as InvoiceWithRelations)
+    : null;
 }
 
 export async function getInvoiceByJob(

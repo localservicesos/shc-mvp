@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
+import { toTitleCase } from "@/lib/utils/format";
 
 export type Customer = {
   id: string;
@@ -21,6 +22,20 @@ export type CustomerInput = {
   notes?: string | null;
 };
 
+/**
+ * Capitalize display fields (name, address) so historical records saved
+ * before normalization still render in Title Case everywhere.
+ */
+function normalizeCustomer<T extends { name: string; address?: string | null }>(
+  customer: T,
+): T {
+  return {
+    ...customer,
+    name: toTitleCase(customer.name),
+    address: customer.address ? toTitleCase(customer.address) : customer.address,
+  };
+}
+
 export async function listCustomers(): Promise<Customer[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -29,7 +44,7 @@ export async function listCustomers(): Promise<Customer[]> {
     .order("name", { ascending: true });
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map(normalizeCustomer);
 }
 
 export async function getCustomer(id: string): Promise<Customer | null> {
@@ -41,7 +56,7 @@ export async function getCustomer(id: string): Promise<Customer | null> {
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return data ? normalizeCustomer(data) : null;
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
