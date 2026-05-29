@@ -8,6 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
+import { SearchBar } from "@/components/search/search-bar";
+import { loadSearchIndexAction } from "@/app/app/search-actions";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import {
   listJobsBetween,
@@ -42,7 +44,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="relative flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
@@ -54,6 +56,15 @@ export default async function DashboardPage() {
               timeZone: tz,
             }).format(new Date())}
           </p>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+          <div className="pointer-events-auto w-full max-w-sm">
+            <SearchBar
+              scope="general"
+              loadIndex={loadSearchIndexAction}
+              placeholder="Search customers, vehicles, jobs, invoices…"
+            />
+          </div>
         </div>
         <Button asChild>
           <Link href="/app/jobs/new">
