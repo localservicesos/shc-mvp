@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { Calendar } from "@/components/schedule/calendar";
 import { MonthGrid } from "@/components/schedule/month-grid";
@@ -56,6 +57,9 @@ export default async function SchedulePage({
   const tz = business?.timezone ?? "Australia/Brisbane";
   const today = dateInTimezone(tz);
   const view = parseView(params.view);
+  // Day/week use the fixed-time grid, which we size to fill the viewport so
+  // the whole day is visible without scrolling. Month/year flow normally.
+  const fitToViewport = view === "day" || view === "week";
   const selectedDate = params.date ?? today;
   // The week view always runs Sunday → Saturday, so snap its anchor back to
   // the Sunday of the selected week. Other views use the selected date as-is.
@@ -116,7 +120,12 @@ export default async function SchedulePage({
           : `${formatDayLabel(startDate, tz)} – ${formatDayLabel(shiftDateString(startDate, 6), tz)}`;
 
   return (
-    <div className="space-y-6">
+    <div
+      className={cn(
+        "flex flex-col gap-6",
+        fitToViewport && "md:h-full md:min-h-0",
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">Schedule</h1>
         <Button asChild>
@@ -203,7 +212,7 @@ export default async function SchedulePage({
         />
       ) : (
         <>
-      <div className="hidden md:block">
+      <div className="hidden min-h-0 flex-1 md:block">
         <Calendar
           startDate={startDate}
           days={days}

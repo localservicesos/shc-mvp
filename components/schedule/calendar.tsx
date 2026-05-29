@@ -6,12 +6,11 @@ import type { JobStatus } from "@/types/jobs";
 
 const GRID_START_HOUR = 7;
 const GRID_END_HOUR = 19;
-const HOUR_PX = 60;
 const HOURS = Array.from(
   { length: GRID_END_HOUR - GRID_START_HOUR },
   (_, i) => i + GRID_START_HOUR,
 );
-const GRID_HEIGHT_PX = HOURS.length * HOUR_PX;
+const GRID_MINUTES = (GRID_END_HOUR - GRID_START_HOUR) * 60;
 
 const EVENT_STYLES: Record<JobStatus, string> = {
   booked:
@@ -24,8 +23,9 @@ const EVENT_STYLES: Record<JobStatus, string> = {
 
 type LaidOutEvent = {
   job: JobWithRelations;
-  topPx: number;
-  heightPx: number;
+  topPct: number;
+  heightPct: number;
+  durationMin: number;
   lane: number;
   totalLanes: number;
 };
@@ -65,6 +65,10 @@ function dayHeaderLabel(dateStr: string, tz: string): { weekday: string; day: st
  * Compute event positions and lane assignments for a single day.
  * Greedy lane assignment: an event goes into the lowest-numbered lane
  * whose previous event has ended.
+ *
+ * Positions are returned as percentages of the visible grid so the column
+ * can fill whatever height it's given (the schedule sizes it to the
+ * viewport) rather than a fixed pixel height.
  */
 function layoutDay(
   jobs: JobWithRelations[],
@@ -87,10 +91,9 @@ function layoutDay(
         (start - dayStartTs) / 60_000 - GRID_START_HOUR * 60;
       const endMinFromGrid =
         (end - dayStartTs) / 60_000 - GRID_START_HOUR * 60;
-      const gridMinutes = (GRID_END_HOUR - GRID_START_HOUR) * 60;
       const clampedStart = Math.max(0, startMinFromGrid);
-      const clampedEnd = Math.min(gridMinutes, endMinFromGrid);
-      if (clampedEnd <= 0 || clampedStart >= gridMinutes) return null;
+      const clampedEnd = Math.min(GRID_MINUTES, endMinFromGrid);
+      if (clampedEnd <= 0 || clampedStart >= GRID_MINUTES) return null;
       return { job, startMin: clampedStart, endMin: clampedEnd };
     })
     .filter((e): e is NonNullable<typeof e> => e !== null)
@@ -113,13 +116,17 @@ function layoutDay(
 
   void tz; // currently unused but reserved for tz-aware rendering later
 
-  return processed.map((e, i) => ({
-    job: e.job,
-    topPx: e.startMin,
-    heightPx: Math.max(20, e.endMin - e.startMin),
-    lane: assigned[i],
-    totalLanes,
-  }));
+  return processed.map((e, i) => {
+    const durationMin = e.endMin - e.startMin;
+    return {
+      job: e.job,
+      topPct: (e.startMin / GRID_MINUTES) * 100,
+      heightPct: (durationMin / GRID_MINUTES) * 100,
+      durationMin,
+      lane: assigned[i],
+      totalLanes,
+    };
+  });
 }
 
 function DayColumn({
@@ -138,10 +145,9 @@ function DayColumn({
   return (
     <div
       className={cn(
-        "relative border-l",
+        "relative h-full border-l",
         isToday ? "bg-accent/20" : "bg-background",
       )}
-      style={{ height: `${GRID_HEIGHT_PX}px` }}
     >
       {HOURS.map((h, i) => (
         <div
@@ -150,11 +156,11 @@ function DayColumn({
             "absolute left-0 right-0 border-t",
             i === 0 ? "border-transparent" : "border-border/60",
           )}
-          style={{ top: `${i * HOUR_PX}px`, height: `${HOUR_PX}px` }}
+          style={{ top: `${(i / HOURS.length) * 100}%` }}
         />
       ))}
 
-      {events.map(({ job, topPx, heightPx, lane, totalLanes }) => {
+      {events.map(({ job, topPct, heightPct, durationMin, lane, totalLanes }) => {
         const widthPct = 100 / totalLanes;
         const leftPct = lane * widthPct;
         const vehicleText = job.vehicle
@@ -172,8 +178,9 @@ function DayColumn({
               EVENT_STYLES[job.status],
             )}
             style={{
-              top: `${topPx}px`,
-              height: `${heightPx}px`,
+              top: `${topPct}%`,
+              height: `${heightPct}%`,
+              minHeight: "18px",
               left: `calc(${leftPct}% + 2px)`,
               width: `calc(${widthPct}% - 4px)`,
             }}
@@ -184,12 +191,12 @@ function DayColumn({
             <p className="truncate font-medium leading-tight">
               {formatEventTime(job.scheduled_start)} {job.customer?.name ?? "—"}
             </p>
-            {heightPx >= 36 && job.service?.name ? (
+            {durationMin >= 36 && job.service?.name ? (
               <p className="truncate text-[11px] opacity-80">
                 {job.service.name}
               </p>
             ) : null}
-            {heightPx >= 56 && vehicleText ? (
+            {durationMin >= 56 && vehicleText ? (
               <p className="truncate text-[11px] opacity-70">{vehicleText}</p>
             ) : null}
           </Link>
@@ -225,63 +232,63 @@ export function Calendar({
     jobsByDay.get(key)?.push(job);
   }
 
-  return (
-    <div className="overflow-x-auto rounded-md border bg-background">
-      <div className="min-w-[640px]">
-        <div
-          className="grid border-b"
-          style={{
-            gridTemplateColumns: `60px repeat(${days}, minmax(0, 1fr))`,
-          }}
-        >
-          <div className="border-r" />
-          {dayKeys.map((key) => {
-            const { weekday, day } = dayHeaderLabel(key, tz);
-            const isToday = key === todayDate;
-            return (
-              <div
-                key={key}
-                className={cn(
-                  "border-l px-2 py-2 text-center text-xs",
-                  isToday
-                    ? "bg-accent/20 font-semibold text-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                <p>{weekday}</p>
-                <p className="text-sm">{day}</p>
-              </div>
-            );
-          })}
-        </div>
+  const gridCols = `60px repeat(${days}, minmax(0, 1fr))`;
 
-        <div
-          className="grid"
-          style={{
-            gridTemplateColumns: `60px repeat(${days}, minmax(0, 1fr))`,
-          }}
-        >
-          <div className="relative border-r" style={{ height: `${GRID_HEIGHT_PX}px` }}>
-            {HOURS.map((h, i) => (
-              <div
-                key={h}
-                className="absolute right-2 text-[10px] text-muted-foreground"
-                style={{ top: `${i * HOUR_PX - 6}px` }}
-              >
-                {i > 0 ? formatHourLabel(h) : null}
-              </div>
-            ))}
+  return (
+    <div className="flex h-full flex-col overflow-hidden rounded-md border bg-background">
+      <div className="flex min-h-0 flex-1 overflow-x-auto">
+        <div className="flex min-h-0 w-full min-w-[640px] flex-col">
+          <div
+            className="grid shrink-0 border-b"
+            style={{ gridTemplateColumns: gridCols }}
+          >
+            <div className="border-r" />
+            {dayKeys.map((key) => {
+              const { weekday, day } = dayHeaderLabel(key, tz);
+              const isToday = key === todayDate;
+              return (
+                <div
+                  key={key}
+                  className={cn(
+                    "border-l px-2 py-2 text-center text-xs",
+                    isToday
+                      ? "bg-accent/20 font-semibold text-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <p>{weekday}</p>
+                  <p className="text-sm">{day}</p>
+                </div>
+              );
+            })}
           </div>
 
-          {dayKeys.map((key) => (
-            <DayColumn
-              key={key}
-              dateKey={key}
-              jobs={jobsByDay.get(key) ?? []}
-              tz={tz}
-              isToday={key === todayDate}
-            />
-          ))}
+          <div
+            className="grid min-h-0 flex-1"
+            style={{ gridTemplateColumns: gridCols }}
+          >
+            <div className="relative h-full border-r">
+              {HOURS.map((h, i) => (
+                <div
+                  key={h}
+                  className="absolute right-2 text-[10px] text-muted-foreground"
+                  style={{ top: `calc(${(i / HOURS.length) * 100}% - 6px)` }}
+                >
+                  {i > 0 ? formatHourLabel(h) : null}
+                </div>
+              ))}
+            </div>
+
+            {dayKeys.map((key) => (
+              <DayColumn
+                key={key}
+                dateKey={key}
+                jobs={jobsByDay.get(key) ?? []}
+                tz={tz}
+                isToday={key === todayDate}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
