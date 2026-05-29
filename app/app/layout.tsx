@@ -45,18 +45,18 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-svh">
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-background md:flex print:hidden">
-        <div className="flex-1 overflow-y-auto">
-          <Sidebar businessName={business.name} />
-        </div>
+    <div className="flex h-svh overflow-hidden print:h-auto print:overflow-visible">
+      <aside className="hidden h-svh w-60 shrink-0 flex-col border-r bg-background md:flex print:hidden">
+        <Sidebar businessName={business.name} />
         <UserMenu email={user.email ?? ""} />
       </aside>
-      <main className="relative flex flex-1 flex-col">
+      <main className="relative flex flex-1 flex-col overflow-hidden print:overflow-visible">
         <div className="absolute right-6 top-6 z-20 print:hidden">
           <ThemeToggle />
         </div>
-        <div className="flex-1 p-6 pr-16 sm:pr-20">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-6 pr-16 sm:pr-20 print:overflow-visible">
+          {children}
+        </div>
       </main>
     </div>
   );
