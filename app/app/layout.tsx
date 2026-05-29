@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default async function AppLayout({
   children,
@@ -51,8 +52,11 @@ export default async function AppLayout({
         </div>
         <UserMenu email={user.email ?? ""} />
       </aside>
-      <main className="flex flex-1 flex-col">
-        <div className="flex-1 p-6">{children}</div>
+      <main className="relative flex flex-1 flex-col">
+        <div className="absolute right-6 top-6 z-20 print:hidden">
+          <ThemeToggle />
+        </div>
+        <div className="flex-1 p-6 pr-16 sm:pr-20">{children}</div>
       </main>
     </div>
   );
