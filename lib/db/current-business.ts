@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type CurrentBusiness = {
@@ -20,8 +21,11 @@ export type CurrentBusiness = {
  * MVP assumes a single business per user. When multi-business support
  * lands, this becomes a "default business" lookup driven by a cookie or
  * a `business_members.is_default` flag.
+ *
+ * Wrapped in React `cache()` so the repeated calls within a single request
+ * (layout, page, and each `create*` write) collapse to one Supabase query.
  */
-export async function getCurrentBusiness(): Promise<CurrentBusiness | null> {
+export const getCurrentBusiness = cache(async (): Promise<CurrentBusiness | null> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -55,4 +59,4 @@ export async function getCurrentBusiness(): Promise<CurrentBusiness | null> {
     address: business.address ?? null,
     logo_url: business.logo_url ?? null,
   };
-}
+});
