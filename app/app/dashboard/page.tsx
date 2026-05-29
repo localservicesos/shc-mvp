@@ -98,7 +98,7 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Wallet className="h-4 w-4" />
+            <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
             Income · {monthLabel}
           </CardTitle>
           <Link
@@ -109,7 +109,7 @@ export default async function DashboardPage() {
           </Link>
         </CardHeader>
         <CardContent>
-          <p className="text-3xl font-semibold tabular-nums">
+          <p className="text-3xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-300">
             {formatMoney(monthIncome, business?.currency ?? "AUD")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
