@@ -4,12 +4,21 @@ import { useActionState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { deleteJobAction } from "../../actions";
+import type { JobStatus } from "@/types/jobs";
 
-export function DeleteJobButton({ jobId }: { jobId: string }) {
+export function DeleteJobButton({
+  jobId,
+  status,
+}: {
+  jobId: string;
+  status: JobStatus;
+}) {
   const [state, formAction, pending] = useActionState(
     deleteJobAction.bind(null, jobId),
     {},
   );
+
+  if (status === "completed") return null;
 
   return (
     <div className="flex flex-col items-end gap-1">
