@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { CalendarClock, CheckCircle2, Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { SearchBar } from "@/components/search/search-bar";
 import { loadSearchIndexAction } from "@/app/app/search-actions";
@@ -48,11 +43,13 @@ export default async function DashboardPage() {
     tz,
     today,
   );
+  const tomorrow = shiftDateString(today, 1);
+  const { startUtc: tomorrowStartUtc } = dayRangeUtc(tz, tomorrow);
 
   const [todayJobs, booked, completedRecently, completedThisMonth] =
     await Promise.all([
       listJobsBetween(todayStart, todayEnd),
-      listJobsByStatus("booked"),
+      listJobsByStatus("booked", { fromUtc: tomorrowStartUtc }),
       listJobsBetween(weekStartUtc, weekEndUtc, { status: "completed" }),
       listJobsBetween(monthStartUtc, monthEndUtc, { status: "completed" }),
     ]);
@@ -117,7 +114,9 @@ export default async function DashboardPage() {
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             {completedThisMonth.length}{" "}
-            {completedThisMonth.length === 1 ? "completed job" : "completed jobs"}{" "}
+            {completedThisMonth.length === 1
+              ? "completed job"
+              : "completed jobs"}{" "}
             this month
           </p>
         </CardContent>
@@ -137,7 +136,7 @@ export default async function DashboardPage() {
           icon={<CalendarClock className="h-4 w-4" />}
           jobs={booked}
           emptyText="No upcoming bookings."
-          viewAllHref="/app/jobs?status=booked"
+          viewAllHref={`/app/jobs?status=booked&from=${tomorrow}`}
         />
         <BucketCard
           title="Completed last 7 days"
