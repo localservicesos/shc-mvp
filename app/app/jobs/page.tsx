@@ -156,6 +156,7 @@ export default async function JobsPage({
                 <TableHead>When</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead className="hidden md:table-cell">Vehicle</TableHead>
+                <TableHead className="hidden md:table-cell">Plate</TableHead>
                 <TableHead className="hidden md:table-cell">Service</TableHead>
                 <TableHead className="text-right">Price</TableHead>
                 <TableHead>Status</TableHead>
@@ -183,6 +184,9 @@ export default async function JobsPage({
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {vehicleText ?? "—"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell font-mono">
+                      {job.vehicle?.plate ?? "—"}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {job.service?.name ?? "—"}
