@@ -32,19 +32,13 @@ export function Sidebar({ businessName }: { businessName: string }) {
 
   return (
     <nav className="flex h-full flex-col gap-1 p-4">
-      <div className="flex items-center gap-3 px-2 pb-4">
+      <div className="mb-4 flex items-center justify-center rounded-lg bg-gray-200 p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/logo.svg"
+          src="/sunshine-hot-cars-logo.avif"
           alt={`${businessName} logo`}
-          className="h-9 w-9 shrink-0 rounded object-contain"
+          className="h-24 w-auto object-contain"
         />
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Business
-          </p>
-          <p className="truncate text-sm font-semibold">{businessName}</p>
-        </div>
       </div>
       <ul className="flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {
