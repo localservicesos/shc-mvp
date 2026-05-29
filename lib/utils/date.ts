@@ -110,6 +110,50 @@ export function monthRangeUtc(
   return { startUtc: start.toISOString(), endUtc: end.toISOString() };
 }
 
+/**
+ * Shift a "YYYY-MM-DD" date string by N months, returning the first day of
+ * the resulting month ("YYYY-MM-01"). Used by the Schedule month view, which
+ * always anchors navigation to the start of a month.
+ */
+export function shiftMonthString(dateStr: string, months: number): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  const total = y * 12 + (m - 1) + months;
+  const ny = Math.floor(total / 12);
+  const nm = (total % 12) + 1;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${ny}-${pad(nm)}-01`;
+}
+
+/**
+ * Return the 42 day strings (6 weeks, Monday-first) that make up the
+ * Google-Calendar-style month grid containing the given date. Leading and
+ * trailing days belong to the adjacent months.
+ */
+export function monthGridDays(dateStr: string): string[] {
+  const [y, m] = dateStr.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const offset = (first.getUTCDay() + 6) % 7; // days since Monday
+  const start = new Date(first);
+  start.setUTCDate(start.getUTCDate() - offset);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(start);
+    d.setUTCDate(start.getUTCDate() + i);
+    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+  });
+}
+
+/** "May 2026" — for the Schedule month-view period label. */
+export function formatMonthLabel(dateStr: string, tz: string): string {
+  const [y, m] = dateStr.split("-").map(Number);
+  const utcNoon = new Date(Date.UTC(y, m - 1, 1, 12));
+  return new Intl.DateTimeFormat("en-AU", {
+    timeZone: tz,
+    month: "long",
+    year: "numeric",
+  }).format(utcNoon);
+}
+
 /** Shift a "YYYY-MM-DD" date string by N days (positive or negative). */
 export function shiftDateString(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);

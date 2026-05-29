@@ -9,14 +9,18 @@ import {
 } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { Calendar } from "@/components/schedule/calendar";
+import { MonthGrid } from "@/components/schedule/month-grid";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import { listJobsBetween, type JobWithRelations } from "@/lib/db/jobs";
 import {
   dateInTimezone,
   dayRangeFromUtc,
   formatDayLabel,
+  formatMonthLabel,
   formatTime,
+  monthGridDays,
   shiftDateString,
+  shiftMonthString,
 } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
 
@@ -24,10 +28,12 @@ export const metadata = {
   title: "Schedule",
 };
 
-type ViewMode = "day" | "week";
+type ViewMode = "day" | "week" | "month";
 
 function parseView(value: string | undefined): ViewMode {
-  return value === "week" ? "week" : "day";
+  if (value === "week") return "week";
+  if (value === "month") return "month";
+  return "day";
 }
 
 function navHref(view: ViewMode, date: string) {
@@ -48,12 +54,18 @@ export default async function SchedulePage({
   const today = dateInTimezone(tz);
   const view = parseView(params.view);
   const startDate = params.date ?? today;
-  const days = view === "week" ? 7 : 1;
 
-  const { startUtc, endUtc } = dayRangeFromUtc(tz, startDate, days);
+  // The month view always renders the full 6-week grid (which spills into the
+  // adjacent months), so fetch the entire visible range rather than one day/week.
+  const gridDays = view === "month" ? monthGridDays(startDate) : [];
+  const fetchStart = view === "month" ? gridDays[0] : startDate;
+  const fetchDays = view === "month" ? gridDays.length : view === "week" ? 7 : 1;
+
+  const { startUtc, endUtc } = dayRangeFromUtc(tz, fetchStart, fetchDays);
   const jobs = await listJobsBetween(startUtc, endUtc);
 
-  // Bucket jobs by local calendar date in the business timezone.
+  // Bucket jobs by local calendar date in the business timezone (mobile list).
+  const days = view === "week" ? 7 : 1;
   const grouped = new Map<string, JobWithRelations[]>();
   for (let i = 0; i < days; i++) {
     grouped.set(shiftDateString(startDate, i), []);
@@ -65,12 +77,20 @@ export default async function SchedulePage({
     if (bucket) bucket.push(job);
   }
 
-  const prevDate = shiftDateString(startDate, -days);
-  const nextDate = shiftDateString(startDate, days);
+  const prevDate =
+    view === "month"
+      ? shiftMonthString(startDate, -1)
+      : shiftDateString(startDate, -days);
+  const nextDate =
+    view === "month"
+      ? shiftMonthString(startDate, 1)
+      : shiftDateString(startDate, days);
   const periodLabel =
     view === "day"
       ? formatDayLabel(startDate, tz)
-      : `${formatDayLabel(startDate, tz)} – ${formatDayLabel(shiftDateString(startDate, 6), tz)}`;
+      : view === "month"
+        ? formatMonthLabel(startDate, tz)
+        : `${formatDayLabel(startDate, tz)} – ${formatDayLabel(shiftDateString(startDate, 6), tz)}`;
 
   return (
     <div className="space-y-6">
@@ -109,6 +129,16 @@ export default async function SchedulePage({
           >
             Week
           </Link>
+          <Link
+            href={navHref("month", startDate)}
+            className={
+              view === "month"
+                ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
+                : "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            }
+          >
+            Month
+          </Link>
         </div>
 
         <div className="flex items-center gap-2">
@@ -128,6 +158,15 @@ export default async function SchedulePage({
         </div>
       </div>
 
+      {view === "month" ? (
+        <MonthGrid
+          monthDate={startDate}
+          jobs={jobs}
+          tz={tz}
+          todayDate={today}
+        />
+      ) : (
+        <>
       <div className="hidden md:block">
         <Calendar
           startDate={startDate}
@@ -204,6 +243,8 @@ export default async function SchedulePage({
           </Card>
         ))}
       </div>
+        </>
+      )}
     </div>
   );
 }
