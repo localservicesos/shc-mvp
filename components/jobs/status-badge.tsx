@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/db/jobs";
+import { JOB_STATUS_LABELS, type JobStatus } from "@/types/jobs";
 
 const STYLES: Record<JobStatus, string> = {
   booked:

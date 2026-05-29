@@ -31,7 +31,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${jakarta.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla's
+          `cz-shortcut-listen`) inject attributes on <body> before hydration. */}
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
