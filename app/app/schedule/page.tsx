@@ -118,10 +118,7 @@ export default async function SchedulePage({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Schedule</h1>
-          <p className="text-sm text-muted-foreground">{periodLabel}</p>
-        </div>
+        <h1 className="text-2xl font-semibold">Schedule</h1>
         <Button asChild>
           <Link href="/app/jobs/new">
             <Plus className="mr-2 h-4 w-4" />
@@ -130,10 +127,10 @@ export default async function SchedulePage({
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 rounded-md border bg-background p-1">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr]">
+        <div className="flex items-center gap-1 justify-self-start rounded-md border bg-background p-1">
           <Link
-            href={navHref("day", startDate === today ? today : startDate)}
+            href={navHref("day", selectedDate)}
             className={
               view === "day"
                 ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
@@ -174,7 +171,11 @@ export default async function SchedulePage({
           </Link>
         </div>
 
-        <div className="flex items-center gap-2">
+        <p className="order-last w-full text-center text-sm font-medium sm:order-none sm:w-auto">
+          {periodLabel}
+        </p>
+
+        <div className="flex items-center gap-2 justify-self-end">
           <Button asChild variant="outline" size="sm">
             <Link href={navHref(view, prevDate)} aria-label="Previous">
               <ChevronLeft className="h-4 w-4" />
