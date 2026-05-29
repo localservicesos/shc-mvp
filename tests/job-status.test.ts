@@ -6,7 +6,7 @@ import {
 } from "../types/jobs";
 
 // ---------------------------------------------------------------------------
-// Helpers that mirror the exact business logic in status-actions.tsx
+// Helpers mirroring the business logic in status-actions.tsx and actions.ts
 // ---------------------------------------------------------------------------
 
 function getAllowedTransitions(status: JobStatus): JobStatus[] {
@@ -16,6 +16,20 @@ function getAllowedTransitions(status: JobStatus): JobStatus[] {
 
 function canGenerateInvoice(status: JobStatus): boolean {
   return status === "completed";
+}
+
+// Mirror cancelJobAction validation
+function validateCancellationReason(reason: string): string | null {
+  const trimmed = reason.trim();
+  return trimmed ? null : "Cancellation reason is required.";
+}
+
+// Mirror the patch built in updateJobStatusAction when reopening
+function patchOnReopen(status: Exclude<JobStatus, "cancelled">): {
+  status: JobStatus;
+  cancellation_reason: null;
+} {
+  return { status, cancellation_reason: null };
 }
 
 // Simulate the migration: what in_progress / ready rows become
@@ -109,7 +123,50 @@ describe("status transitions from cancelled", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Invoice generation gate
+// 3. Cancellation reason validation
+// ---------------------------------------------------------------------------
+
+describe("cancellation reason validation", () => {
+  it("accepts a normal reason string", () => {
+    expect(validateCancellationReason("Customer rescheduled")).toBeNull();
+  });
+
+  it("accepts a reason with surrounding whitespace (trimmed)", () => {
+    expect(validateCancellationReason("  Vehicle not available  ")).toBeNull();
+  });
+
+  it("rejects an empty string", () => {
+    expect(validateCancellationReason("")).toBe(
+      "Cancellation reason is required.",
+    );
+  });
+
+  it("rejects a whitespace-only string", () => {
+    expect(validateCancellationReason("   ")).toBe(
+      "Cancellation reason is required.",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4. Reopen clears cancellation_reason
+// ---------------------------------------------------------------------------
+
+describe("reopening a cancelled job clears the reason", () => {
+  it("sets cancellation_reason to null when moving to booked", () => {
+    const patch = patchOnReopen("booked");
+    expect(patch.cancellation_reason).toBeNull();
+    expect(patch.status).toBe("booked");
+  });
+
+  it("sets cancellation_reason to null when moving to completed", () => {
+    const patch = patchOnReopen("completed");
+    expect(patch.cancellation_reason).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Invoice generation gate
 // ---------------------------------------------------------------------------
 
 describe("invoice generation", () => {
@@ -127,7 +184,7 @@ describe("invoice generation", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Migration — simulate what 0007_simplify_job_statuses.sql does to rows
+// 6. Migration — simulate what 0007_simplify_job_statuses.sql does to rows
 // ---------------------------------------------------------------------------
 
 describe("migration: old statuses remapped to booked", () => {
@@ -161,34 +218,45 @@ describe("migration: old statuses remapped to booked", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. Full job lifecycle simulations
+// 7. Full job lifecycle simulations
 // ---------------------------------------------------------------------------
 
 describe("full job lifecycle: booked → completed → invoice", () => {
   it("simulates a normal job completing", () => {
     let status: JobStatus = "booked";
 
-    // Job is booked — no invoice yet
     expect(canGenerateInvoice(status)).toBe(false);
     expect(getAllowedTransitions(status)).toContain("completed");
 
-    // Mark complete
     status = "completed";
     expect(canGenerateInvoice(status)).toBe(true);
   });
 
-  it("simulates a job being cancelled then reopened", () => {
+  it("simulates cancelling a job with a reason then reopening", () => {
     let status: JobStatus = "booked";
+    let cancellation_reason: string | null = null;
 
-    // Cancel the job
-    expect(getAllowedTransitions(status)).toContain("cancelled");
+    // Attempt cancel with no reason — blocked
+    expect(validateCancellationReason("")).not.toBeNull();
+
+    // Cancel with a valid reason
+    const reason = "Customer called to reschedule";
+    expect(validateCancellationReason(reason)).toBeNull();
     status = "cancelled";
+    cancellation_reason = reason;
 
-    // Reopen it
-    expect(getAllowedTransitions(status)).toContain("booked");
-    status = "booked";
+    expect(status).toBe("cancelled");
+    expect(cancellation_reason).toBe(reason);
 
-    // Now complete it
+    // Reopen — reason is cleared
+    const patch = patchOnReopen("booked");
+    status = patch.status;
+    cancellation_reason = patch.cancellation_reason;
+
+    expect(status).toBe("booked");
+    expect(cancellation_reason).toBeNull();
+
+    // Now complete it normally
     expect(getAllowedTransitions(status)).toContain("completed");
     status = "completed";
     expect(canGenerateInvoice(status)).toBe(true);
@@ -200,7 +268,6 @@ describe("full job lifecycle: booked → completed → invoice", () => {
     expect(getAllowedTransitions(status)).toContain("booked");
     status = "booked";
 
-    // Back to booked — invoice gate closed again
     expect(canGenerateInvoice(status)).toBe(false);
   });
 });
