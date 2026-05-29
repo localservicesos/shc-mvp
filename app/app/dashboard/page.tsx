@@ -18,9 +18,11 @@ import {
 } from "@/lib/db/jobs";
 import {
   dateInTimezone,
+  dayRangeFromUtc,
   dayRangeUtc,
   formatScheduled,
   formatTime,
+  shiftDateString,
 } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
 
@@ -35,11 +37,17 @@ export default async function DashboardPage() {
   const tz = business?.timezone ?? "Australia/Brisbane";
   const today = dateInTimezone(tz);
   const { startUtc: todayStart, endUtc: todayEnd } = dayRangeUtc(tz, today);
+  const weekStart = shiftDateString(today, -6);
+  const { startUtc: weekStartUtc, endUtc: weekEndUtc } = dayRangeFromUtc(
+    tz,
+    weekStart,
+    7,
+  );
 
-  const [todayJobs, booked, completedToday] = await Promise.all([
+  const [todayJobs, booked, completedRecently] = await Promise.all([
     listJobsBetween(todayStart, todayEnd),
     listJobsByStatus("booked"),
-    listJobsBetween(todayStart, todayEnd, { status: "completed" }),
+    listJobsBetween(weekStartUtc, weekEndUtc, { status: "completed" }),
   ]);
 
   return (
@@ -84,18 +92,18 @@ export default async function DashboardPage() {
           viewAllHref={`/app/jobs?from=${today}&to=${today}`}
         />
         <BucketCard
-          title="All booked"
+          title="Upcoming"
           icon={<CalendarClock className="h-4 w-4" />}
           jobs={booked}
           emptyText="No upcoming bookings."
           viewAllHref="/app/jobs?status=booked"
         />
         <BucketCard
-          title="Completed today"
+          title="Completed last 7 days"
           icon={<CheckCircle2 className="h-4 w-4" />}
-          jobs={completedToday}
-          emptyText="No completions yet today."
-          viewAllHref={`/app/jobs?status=completed&from=${today}&to=${today}`}
+          jobs={completedRecently}
+          emptyText="No completions in the last 7 days."
+          viewAllHref={`/app/jobs?status=completed&from=${weekStart}&to=${today}`}
         />
       </div>
     </div>
