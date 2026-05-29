@@ -169,7 +169,7 @@ function BucketCard({
   const hidden = jobs.length - visible.length;
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           {icon}
@@ -179,7 +179,7 @@ function BucketCard({
           {jobs.length}
         </span>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-1 flex-col gap-3">
         {visible.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyText}</p>
         ) : (
@@ -228,7 +228,7 @@ function BucketCard({
         {hidden > 0 || jobs.length > 0 ? (
           <Link
             href={viewAllHref}
-            className="block text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="mt-auto block pt-1 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             {hidden > 0 ? `View all (${jobs.length})` : "View list"} →
           </Link>
