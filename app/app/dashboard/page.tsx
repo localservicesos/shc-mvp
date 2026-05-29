@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, CheckCircle2, Plus } from "lucide-react";
+import { CalendarClock, CheckCircle2, Plus, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,9 +18,12 @@ import {
 } from "@/lib/db/jobs";
 import {
   dateInTimezone,
+  dayRangeFromUtc,
   dayRangeUtc,
   formatScheduled,
   formatTime,
+  monthRangeUtc,
+  shiftDateString,
 } from "@/lib/utils/date";
 import { formatMoney } from "@/lib/utils/format";
 
@@ -35,12 +38,33 @@ export default async function DashboardPage() {
   const tz = business?.timezone ?? "Australia/Brisbane";
   const today = dateInTimezone(tz);
   const { startUtc: todayStart, endUtc: todayEnd } = dayRangeUtc(tz, today);
+  const weekStart = shiftDateString(today, -6);
+  const { startUtc: weekStartUtc, endUtc: weekEndUtc } = dayRangeFromUtc(
+    tz,
+    weekStart,
+    7,
+  );
+  const { startUtc: monthStartUtc, endUtc: monthEndUtc } = monthRangeUtc(
+    tz,
+    today,
+  );
 
-  const [todayJobs, booked, completedToday] = await Promise.all([
-    listJobsBetween(todayStart, todayEnd),
-    listJobsByStatus("booked"),
-    listJobsBetween(todayStart, todayEnd, { status: "completed" }),
-  ]);
+  const [todayJobs, booked, completedRecently, completedThisMonth] =
+    await Promise.all([
+      listJobsBetween(todayStart, todayEnd),
+      listJobsByStatus("booked"),
+      listJobsBetween(weekStartUtc, weekEndUtc, { status: "completed" }),
+      listJobsBetween(monthStartUtc, monthEndUtc, { status: "completed" }),
+    ]);
+
+  const monthIncome = completedThisMonth.reduce(
+    (sum, job) => sum + (job.price ?? 0),
+    0,
+  );
+  const monthLabel = new Intl.DateTimeFormat("en-AU", {
+    month: "long",
+    timeZone: tz,
+  }).format(new Date());
 
   return (
     <div className="space-y-6">
@@ -74,6 +98,31 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Wallet className="h-4 w-4" />
+            Income · {monthLabel}
+          </CardTitle>
+          <Link
+            href={`/app/jobs?status=completed&from=${today.slice(0, 7)}-01&to=${today}`}
+            className="text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            View completed →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <p className="text-3xl font-semibold tabular-nums">
+            {formatMoney(monthIncome, business?.currency ?? "AUD")}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {completedThisMonth.length}{" "}
+            {completedThisMonth.length === 1 ? "completed job" : "completed jobs"}{" "}
+            this month
+          </p>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 md:grid-cols-3">
         <BucketCard
           title="Today"
@@ -84,18 +133,18 @@ export default async function DashboardPage() {
           viewAllHref={`/app/jobs?from=${today}&to=${today}`}
         />
         <BucketCard
-          title="All booked"
+          title="Upcoming"
           icon={<CalendarClock className="h-4 w-4" />}
           jobs={booked}
           emptyText="No upcoming bookings."
           viewAllHref="/app/jobs?status=booked"
         />
         <BucketCard
-          title="Completed today"
+          title="Completed last 7 days"
           icon={<CheckCircle2 className="h-4 w-4" />}
-          jobs={completedToday}
-          emptyText="No completions yet today."
-          viewAllHref={`/app/jobs?status=completed&from=${today}&to=${today}`}
+          jobs={completedRecently}
+          emptyText="No completions in the last 7 days."
+          viewAllHref={`/app/jobs?status=completed&from=${weekStart}&to=${today}`}
         />
       </div>
     </div>

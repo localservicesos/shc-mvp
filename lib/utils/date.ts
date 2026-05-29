@@ -91,6 +91,25 @@ export function dayRangeFromUtc(
   return { startUtc, endUtc: end.toISOString() };
 }
 
+/**
+ * Get the [startUTC, endUTC) range covering the full calendar month that
+ * contains the given timezone-local date. Same fixed-offset caveat as
+ * dayRangeUtc (Australia/Brisbane, UTC+10, no DST).
+ */
+export function monthRangeUtc(
+  tz: string,
+  date: string = dateInTimezone(tz),
+): { startUtc: string; endUtc: string } {
+  const [y, m] = date.split("-").map(Number);
+  const offset = tz === "Australia/Brisbane" ? "+10:00" : "+10:00";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const start = new Date(`${y}-${pad(m)}-01T00:00:00${offset}`);
+  const nextYear = m === 12 ? y + 1 : y;
+  const nextMonth = m === 12 ? 1 : m + 1;
+  const end = new Date(`${nextYear}-${pad(nextMonth)}-01T00:00:00${offset}`);
+  return { startUtc: start.toISOString(), endUtc: end.toISOString() };
+}
+
 /** Shift a "YYYY-MM-DD" date string by N days (positive or negative). */
 export function shiftDateString(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
