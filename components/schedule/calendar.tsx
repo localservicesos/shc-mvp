@@ -16,10 +16,6 @@ const GRID_HEIGHT_PX = HOURS.length * HOUR_PX;
 const EVENT_STYLES: Record<JobStatus, string> = {
   booked:
     "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100",
-  in_progress:
-    "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100",
-  ready:
-    "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100",
   completed: "border-border bg-muted text-muted-foreground",
   cancelled:
     "border-rose-300 bg-rose-50 text-rose-900 line-through opacity-70 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100",
@@ -245,26 +241,14 @@ export function Calendar({
               <div
                 key={key}
                 className={cn(
-                  "border-l px-3 py-2 text-center",
-                  isToday ? "bg-accent/40" : "",
+                  "border-l px-2 py-2 text-center text-xs",
+                  isToday
+                    ? "bg-accent/20 font-semibold text-foreground"
+                    : "text-muted-foreground",
                 )}
               >
-                <p
-                  className={cn(
-                    "text-xs uppercase tracking-wider",
-                    isToday ? "text-accent-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {weekday}
-                </p>
-                <p
-                  className={cn(
-                    "text-sm",
-                    isToday ? "font-semibold" : "font-medium",
-                  )}
-                >
-                  {day}
-                </p>
+                <p>{weekday}</p>
+                <p className="text-sm">{day}</p>
               </div>
             );
           })}
@@ -274,20 +258,20 @@ export function Calendar({
           className="grid"
           style={{
             gridTemplateColumns: `60px repeat(${days}, minmax(0, 1fr))`,
-            height: `${GRID_HEIGHT_PX}px`,
           }}
         >
-          <div className="relative border-r">
+          <div className="relative border-r" style={{ height: `${GRID_HEIGHT_PX}px` }}>
             {HOURS.map((h, i) => (
               <div
                 key={h}
-                className="absolute right-1 -translate-y-1/2 text-[10px] text-muted-foreground"
-                style={{ top: `${i * HOUR_PX}px` }}
+                className="absolute right-2 text-[10px] text-muted-foreground"
+                style={{ top: `${i * HOUR_PX - 6}px` }}
               >
-                {i === 0 ? "" : formatHourLabel(h)}
+                {i > 0 ? formatHourLabel(h) : null}
               </div>
             ))}
           </div>
+
           {dayKeys.map((key) => (
             <DayColumn
               key={key}

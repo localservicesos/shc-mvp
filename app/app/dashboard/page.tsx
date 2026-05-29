@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, CheckCircle2, Clock, Plus } from "lucide-react";
+import { CalendarClock, CheckCircle2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,7 +16,6 @@ import {
 } from "@/lib/db/jobs";
 import {
   dateInTimezone,
-  dayRangeFromUtc,
   dayRangeUtc,
   formatScheduled,
   formatTime,
@@ -34,13 +33,11 @@ export default async function DashboardPage() {
   const tz = business?.timezone ?? "Australia/Brisbane";
   const today = dateInTimezone(tz);
   const { startUtc: todayStart, endUtc: todayEnd } = dayRangeUtc(tz, today);
-  const { endUtc: weekEnd } = dayRangeFromUtc(tz, today, 14);
 
-  const [todayJobs, inProgress, ready, upcoming] = await Promise.all([
+  const [todayJobs, booked, completedToday] = await Promise.all([
     listJobsBetween(todayStart, todayEnd),
-    listJobsByStatus("in_progress"),
-    listJobsByStatus("ready"),
-    listJobsBetween(todayEnd, weekEnd, { status: "booked" }),
+    listJobsByStatus("booked"),
+    listJobsBetween(todayStart, todayEnd, { status: "completed" }),
   ]);
 
   return (
@@ -66,7 +63,7 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <BucketCard
           title="Today"
           icon={<CalendarClock className="h-4 w-4" />}
@@ -76,25 +73,18 @@ export default async function DashboardPage() {
           viewAllHref={`/app/jobs?from=${today}&to=${today}`}
         />
         <BucketCard
-          title="In progress"
-          icon={<Clock className="h-4 w-4" />}
-          jobs={inProgress}
-          emptyText="No jobs in progress."
-          viewAllHref="/app/jobs?status=in_progress"
-        />
-        <BucketCard
-          title="Ready for pickup"
-          icon={<CheckCircle2 className="h-4 w-4" />}
-          jobs={ready}
-          emptyText="Nothing waiting to be handed off."
-          viewAllHref="/app/jobs?status=ready"
-        />
-        <BucketCard
-          title="Upcoming (14d)"
+          title="All booked"
           icon={<CalendarClock className="h-4 w-4" />}
-          jobs={upcoming}
-          emptyText="No bookings in the next two weeks."
+          jobs={booked}
+          emptyText="No upcoming bookings."
           viewAllHref="/app/jobs?status=booked"
+        />
+        <BucketCard
+          title="Completed today"
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          jobs={completedToday}
+          emptyText="No completions yet today."
+          viewAllHref={`/app/jobs?status=completed&from=${today}&to=${today}`}
         />
       </div>
     </div>

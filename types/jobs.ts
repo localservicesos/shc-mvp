@@ -9,8 +9,6 @@ import type { Service } from "@/lib/db/services";
 
 export const JOB_STATUSES = [
   "booked",
-  "in_progress",
-  "ready",
   "completed",
   "cancelled",
 ] as const;
@@ -18,8 +16,6 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   booked: "Booked",
-  in_progress: "In progress",
-  ready: "Ready",
   completed: "Completed",
   cancelled: "Cancelled",
 };

@@ -200,7 +200,7 @@ export default async function JobDetailPage({
                 </Link>
               </Button>
             </div>
-          ) : job.status === "ready" || job.status === "completed" ? (
+          ) :job.status === "completed" ? (
             <form action={generateInvoiceFromJobAction.bind(null, job.id)}>
               <Button type="submit" size="sm">
                 <FileText className="mr-2 h-4 w-4" />
@@ -209,7 +209,7 @@ export default async function JobDetailPage({
             </form>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Mark the job as <strong>ready</strong> to generate an invoice.
+              Mark the job as <strong>completed</strong> to generate an invoice.
             </p>
           )}
         </CardContent>
