@@ -26,8 +26,6 @@ export const metadata = {
   title: "Dashboard",
 };
 
-const MAX_ROWS = 5;
-
 export default async function DashboardPage() {
   const business = await getCurrentBusiness();
   const tz = business?.timezone ?? "Australia/Brisbane";
@@ -64,8 +62,8 @@ export default async function DashboardPage() {
   }).format(new Date());
 
   return (
-    <div className="space-y-6">
-      <div className="relative flex items-center justify-between gap-3">
+    <div className="flex h-full flex-col gap-6 md:overflow-hidden">
+      <div className="relative flex shrink-0 items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
@@ -95,7 +93,7 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="shrink-0">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
@@ -122,7 +120,7 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:min-h-0 md:flex-1 md:grid-cols-3 md:items-start">
         <BucketCard
           title="Today"
           icon={<CalendarClock className="h-4 w-4" />}
@@ -165,12 +163,11 @@ function BucketCard({
   viewAllHref: string;
   dateMode?: "time" | "scheduled";
 }) {
-  const visible = jobs.slice(0, MAX_ROWS);
-  const hidden = jobs.length - visible.length;
+  const visible = jobs;
 
   return (
-    <Card className="h-full">
-      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+    <Card className="flex flex-col md:max-h-full">
+      <CardHeader className="flex shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           {icon}
           {title}
@@ -179,11 +176,11 @@ function BucketCard({
           {jobs.length}
         </span>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
         {visible.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyText}</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
             {visible.map((job) => {
               const vehicleText = job.vehicle
                 ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
@@ -225,12 +222,12 @@ function BucketCard({
           </ul>
         )}
 
-        {hidden > 0 || jobs.length > 0 ? (
+        {jobs.length > 0 ? (
           <Link
             href={viewAllHref}
-            className="mt-auto block pt-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="block shrink-0 pt-1 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
-            {hidden > 0 ? `View all (${jobs.length})` : "View list"} →
+            View list →
           </Link>
         ) : null}
       </CardContent>
