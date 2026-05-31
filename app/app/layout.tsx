@@ -28,8 +28,8 @@ export default async function AppLayout({
           <h1 className="text-xl font-semibold">No business linked</h1>
           <p className="text-sm text-muted-foreground">
             Your account is signed in, but it isn&apos;t a member of any
-            business yet. Ask an admin to add you to one, or run the dev seed
-            in <code>supabase/seed.sql</code>.
+            business yet. Ask an admin to add you to one, or run the dev seed in{" "}
+            <code>supabase/seed.sql</code>.
           </p>
           <form action="/auth/signout" method="post">
             <button
@@ -51,6 +51,10 @@ export default async function AppLayout({
         <UserMenu email={user.email ?? ""} />
       </aside>
       <main className="relative flex flex-1 flex-col overflow-hidden print:overflow-visible">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10 bg-[url('/bg-studio.webp')] bg-cover bg-center bg-no-repeat opacity-[0.04] dark:opacity-[0.02] print:hidden"
+        />
         <div className="absolute right-6 top-6 z-20 print:hidden">
           <ThemeToggle />
         </div>
