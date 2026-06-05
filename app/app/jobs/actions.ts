@@ -79,7 +79,7 @@ function parseJobForm(formData: FormData): JobInput {
     throw new Error("Pick a start and end time.");
   }
   if (new Date(scheduled_end) <= new Date(scheduled_start)) {
-    throw new Error("End must be after start.");
+    throw new Error("End date must be after start date.");
   }
 
   return {
@@ -122,7 +122,9 @@ export async function deleteJobAction(
   try {
     await deleteJob(id);
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "Failed to delete job." };
+    return {
+      error: err instanceof Error ? err.message : "Failed to delete job.",
+    };
   }
   revalidatePath("/app/jobs");
   redirect("/app/jobs");

@@ -5,7 +5,7 @@ import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
 import { Toaster as Sonner, toast, useSonner, type ToasterProps } from "sonner";
 
-const TOAST_DURATION_MS = 10000;
+const TOAST_DURATION_MS = 6000;
 
 const BACKDROP_Z_INDEX = 999999998;
 

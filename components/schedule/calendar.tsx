@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { dateInTimezone, shiftDateString } from "@/lib/utils/date";
+import { jobDateKeys, shiftDateString } from "@/lib/utils/date";
 import type { JobWithRelations } from "@/types/jobs";
 import type { JobStatus } from "@/types/jobs";
 
@@ -28,6 +28,10 @@ type LaidOutEvent = {
   durationMin: number;
   lane: number;
   totalLanes: number;
+  /** Booking started on an earlier day (this block carries over from midnight). */
+  continuesFromPrev: boolean;
+  /** Booking runs past this day into the next. */
+  continuesToNext: boolean;
 };
 
 function formatHourLabel(h: number): string {
@@ -83,10 +87,12 @@ function layoutDay(
       if (!job.scheduled_start) return null;
       const start = new Date(job.scheduled_start).getTime();
       if (Number.isNaN(start)) return null;
-      if (start < dayStartTs || start >= dayEndTs) return null;
       const end = job.scheduled_end
         ? new Date(job.scheduled_end).getTime()
         : start + 60 * 60 * 1000;
+      // Keep any booking that overlaps this day, not only ones starting in it,
+      // so a multi-day booking shows on each day it covers.
+      if (start >= dayEndTs || end <= dayStartTs) return null;
       const startMinFromGrid =
         (start - dayStartTs) / 60_000 - GRID_START_HOUR * 60;
       const endMinFromGrid =
@@ -94,7 +100,13 @@ function layoutDay(
       const clampedStart = Math.max(0, startMinFromGrid);
       const clampedEnd = Math.min(GRID_MINUTES, endMinFromGrid);
       if (clampedEnd <= 0 || clampedStart >= GRID_MINUTES) return null;
-      return { job, startMin: clampedStart, endMin: clampedEnd };
+      return {
+        job,
+        startMin: clampedStart,
+        endMin: clampedEnd,
+        continuesFromPrev: start < dayStartTs,
+        continuesToNext: end > dayEndTs,
+      };
     })
     .filter((e): e is NonNullable<typeof e> => e !== null)
     .sort((a, b) => a.startMin - b.startMin);
@@ -125,6 +137,8 @@ function layoutDay(
       durationMin,
       lane: assigned[i],
       totalLanes,
+      continuesFromPrev: e.continuesFromPrev,
+      continuesToNext: e.continuesToNext,
     };
   });
 }
@@ -160,7 +174,7 @@ function DayColumn({
         />
       ))}
 
-      {events.map(({ job, topPct, heightPct, durationMin, lane, totalLanes }) => {
+      {events.map(({ job, topPct, heightPct, durationMin, lane, totalLanes, continuesFromPrev, continuesToNext }) => {
         const widthPct = 100 / totalLanes;
         const leftPct = lane * widthPct;
         const vehicleText = job.vehicle
@@ -171,11 +185,15 @@ function DayColumn({
 
         return (
           <Link
-            key={job.id}
+            key={`${dateKey}-${job.id}`}
             href={`/app/jobs/${job.id}`}
             className={cn(
               "absolute overflow-hidden rounded-md border px-1.5 py-1 text-xs shadow-sm hover:z-10 hover:shadow-md",
               EVENT_STYLES[job.status],
+              // Square off the edge that bleeds into an adjacent day to signal
+              // the booking continues there.
+              continuesFromPrev && "rounded-t-none",
+              continuesToNext && "rounded-b-none",
             )}
             style={{
               top: `${topPct}%`,
@@ -189,7 +207,10 @@ function DayColumn({
             }`}
           >
             <p className="truncate font-medium leading-tight">
-              {formatEventTime(job.scheduled_start)} {job.customer?.name ?? "—"}
+              {continuesFromPrev
+                ? "↑ cont."
+                : formatEventTime(job.scheduled_start)}{" "}
+              {job.customer?.name ?? "—"}
             </p>
             {durationMin >= 36 && job.service?.name ? (
               <p className="truncate text-[11px] opacity-80">
@@ -223,13 +244,15 @@ export function Calendar({
     shiftDateString(startDate, i),
   );
 
-  // Group jobs by their local date in the business timezone.
+  // Group jobs by every local date they span, so a booking that runs past
+  // midnight appears on each day (clipped per day inside layoutDay).
   const jobsByDay = new Map<string, JobWithRelations[]>();
   for (const key of dayKeys) jobsByDay.set(key, []);
   for (const job of jobs) {
     if (!job.scheduled_start) continue;
-    const key = dateInTimezone(tz, new Date(job.scheduled_start));
-    jobsByDay.get(key)?.push(job);
+    for (const key of jobDateKeys(job.scheduled_start, job.scheduled_end, tz)) {
+      jobsByDay.get(key)?.push(job);
+    }
   }
 
   const gridCols = `60px repeat(${days}, minmax(0, 1fr))`;

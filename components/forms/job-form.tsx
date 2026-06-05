@@ -165,7 +165,7 @@ export function JobForm({
 
     // datetime-local strings ("YYYY-MM-DDTHH:MM") compare correctly as text.
     if (values.scheduled_end <= values.scheduled_start) {
-      toast.error("End must be after start.");
+      toast.error("End date must be after start date.");
       return;
     }
 
@@ -307,9 +307,7 @@ export function JobForm({
               name="status"
               className={cn(selectClass)}
               value={values.status}
-              onChange={(e) =>
-                setField("status", e.target.value as JobStatus)
-              }
+              onChange={(e) => setField("status", e.target.value as JobStatus)}
               disabled={isPending}
             >
               {JOB_STATUSES.map((s) => (

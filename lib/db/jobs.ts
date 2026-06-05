@@ -301,6 +301,37 @@ export async function listJobsBetween(
   return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
 }
 
+/**
+ * Jobs that OVERLAP the given UTC range — i.e. they start before the range
+ * ends and finish after it begins. Unlike listJobsBetween (start-only), this
+ * catches multi-day bookings that began before the range, so the Schedule can
+ * render a booking on every day it spans. Jobs without an end are treated as
+ * point bookings and included only when their start falls in the range.
+ */
+export async function listJobsOverlapping(
+  startUtc: string,
+  endUtc: string,
+  options: { status?: JobStatus | "all" } = {},
+): Promise<JobWithRelations[]> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("jobs")
+    .select(RELATIONS)
+    .lt("scheduled_start", endUtc)
+    .or(
+      `scheduled_end.gt.${startUtc},and(scheduled_end.is.null,scheduled_start.gte.${startUtc})`,
+    )
+    .order("scheduled_start", { ascending: true });
+
+  if (options.status && options.status !== "all") {
+    query = query.eq("status", options.status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
+}
+
 /** Jobs with the given status, optionally restricted to scheduled_start >= some UTC instant. */
 export async function listJobsByStatus(
   status: JobStatus,
