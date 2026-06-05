@@ -18,7 +18,7 @@ The first deliverable is an operational web app for **Raphael's car detailing bu
 3. Customers list + create / edit
 4. Customer detail — info, vehicles, past jobs, add vehicle, add job
 5. Jobs list — filter by status, filter by date, create job
-6. Job detail — info, status update, notes, photos, generate invoice
+6. Job detail — info, status update, notes, generate invoice; photos built but hidden behind `showPhotos` feature flag (see `app/app/jobs/[id]/page.tsx`)
 7. Schedule — daily / weekly list view (no drag and drop)
 8. Invoice — printable / shareable, mark sent, mark paid
 
@@ -60,7 +60,7 @@ The MVP is "done" when Raphael can:
 4. Schedule a job using one of his services.
 5. See that job on the dashboard / schedule.
 6. Update its status (booked → in_progress → ready → completed).
-7. Attach before/after photos.
+7. Attach before/after photos. *(photo UI is built but currently disabled via `showPhotos` flag — enable before shipping)*
 8. Generate an invoice from the completed job and mark it sent, then paid.
 9. Find all of the above later via the customer's history.
 

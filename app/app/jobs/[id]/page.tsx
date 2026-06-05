@@ -42,6 +42,9 @@ export default async function JobDetailPage({
   ]);
 
   const uploadAction = uploadJobPhotoAction.bind(null, job.id);
+  
+  {/* Feature Flag: Photos Section = false */}
+  const showPhotos = false;
 
   const vehicleText = job.vehicle
     ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
@@ -179,16 +182,18 @@ export default async function JobDetailPage({
           )}
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Photos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <PhotoUploader action={uploadAction} />
-          <PhotoGrid jobId={job.id} photos={photos} />
-        </CardContent>
-      </Card>
+      
+      {showPhotos ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Photos</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <PhotoUploader action={uploadAction} />
+            <PhotoGrid jobId={job.id} photos={photos} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
