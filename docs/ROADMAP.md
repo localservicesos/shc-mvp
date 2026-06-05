@@ -14,7 +14,7 @@ Operational web app replacing Raphael's paper notebook.
 - [x] Jobs CRUD with status flow (`booked` → `in_progress` → `ready` → `completed` / `cancelled`)
 - [x] Dashboard (today, upcoming, in-progress, ready, quick "new job")
 - [x] Schedule view (daily / weekly list with correct Brisbane timezone)
-- [x] Job detail with photo upload + notes (FK-safe delete + inline error)
+- [~] Job detail with notes (FK-safe delete + inline error); photo upload built but hidden behind `showPhotos = false` flag in `app/app/jobs/[id]/page.tsx` — flip to `true` to enable
 - [x] Invoice generation from a job, mark sent, mark paid, printable page (with GST breakdown)
 
 ## Later — quality of life for Raphael (post-MVP, same business)
