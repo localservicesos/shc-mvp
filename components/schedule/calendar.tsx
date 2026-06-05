@@ -291,15 +291,32 @@ export function Calendar({
             style={{ gridTemplateColumns: gridCols }}
           >
             <div className="relative h-full border-r">
-              {HOURS.map((h, i) => (
-                <div
-                  key={h}
-                  className="absolute right-2 text-[10px] text-muted-foreground"
-                  style={{ top: `calc(${(i / HOURS.length) * 100}% - 6px)` }}
-                >
-                  {i > 0 ? formatHourLabel(h) : null}
-                </div>
-              ))}
+              {Array.from(
+                { length: GRID_END_HOUR - GRID_START_HOUR + 1 },
+                (_, i) => GRID_START_HOUR + i,
+              ).map((h) => {
+                const pct =
+                  ((h - GRID_START_HOUR) / (GRID_END_HOUR - GRID_START_HOUR)) *
+                  100;
+                const isFirst = h === GRID_START_HOUR;
+                const isLast = h === GRID_END_HOUR;
+                return (
+                  <div
+                    key={h}
+                    className="absolute right-2 text-[10px] text-muted-foreground"
+                    style={{
+                      // Keep the first/last labels fully inside the grid.
+                      top: isFirst
+                        ? "2px"
+                        : isLast
+                          ? "calc(100% - 12px)"
+                          : `calc(${pct}% - 6px)`,
+                    }}
+                  >
+                    {formatHourLabel(h)}
+                  </div>
+                );
+              })}
             </div>
 
             {dayKeys.map((key) => (
