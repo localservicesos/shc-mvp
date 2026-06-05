@@ -49,6 +49,9 @@
 }
 
 :root {
+  /* Tells the browser to render native controls (select dropdowns, date
+     pickers, scrollbars) with the light palette. Overridden in `.dark`. */
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -84,6 +87,9 @@
 }
 
 .dark {
+  /* Native controls follow the dark palette so `<select>` dropdowns and date
+     pickers render with a dark background and light text. */
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
