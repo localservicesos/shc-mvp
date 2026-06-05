@@ -64,7 +64,7 @@ export function VehicleForm({
         await action(formData);
       } catch (err) {
         if (isRedirectError(err)) {
-          if (successMessage) toast.success(successMessage);
+          if (successMessage) toast.success(successMessage, { duration: 2000 });
           throw err;
         }
         toast.error(

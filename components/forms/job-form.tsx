@@ -181,7 +181,7 @@ export function JobForm({
         // A Server Action that redirects on success throws NEXT_REDIRECT —
         // that's not an error. Show the success toast and let Next navigate.
         if (isRedirectError(err)) {
-          if (successMessage) toast.success(successMessage);
+          if (successMessage) toast.success(successMessage, { duration: 2000 });
           throw err;
         }
         toast.error(
