@@ -5,7 +5,7 @@ import { toTitleCase } from "@/lib/utils/format";
 import type { Customer } from "@/lib/db/customers";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Service } from "@/lib/db/services";
-import type { Job } from "@/types/jobs";
+import { jobTotal, type Job } from "@/types/jobs";
 import type { Invoice, InvoiceStatus } from "@/types/invoices";
 
 export type { Invoice, InvoiceStatus } from "@/types/invoices";
@@ -15,7 +15,14 @@ export type InvoiceWithRelations = Invoice & {
   job:
     | (Pick<
         Job,
-        "id" | "scheduled_start" | "scheduled_end" | "notes" | "price"
+        | "id"
+        | "scheduled_start"
+        | "scheduled_end"
+        | "notes"
+        | "price"
+        | "discount"
+        | "extra"
+        | "adjustment_note"
       > & {
         customer: Pick<
           Customer,
@@ -31,7 +38,7 @@ export type InvoiceWithRelations = Invoice & {
 };
 
 const RELATIONS =
-  "*, job:jobs(id, scheduled_start, scheduled_end, notes, price, customer:customers(id, name, phone, email, address), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, description))";
+  "*, job:jobs(id, scheduled_start, scheduled_end, notes, price, discount, extra, adjustment_note, customer:customers(id, name, phone, email, address), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, description))";
 
 /** Title-case the invoice's customer name and address for consistent display. */
 function normalizeInvoice(invoice: InvoiceWithRelations): InvoiceWithRelations {
@@ -129,10 +136,10 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
   const existing = await getInvoiceByJob(jobId);
   if (existing) return existing;
 
-  // Snapshot the job's current price.
+  // Snapshot the job's current price and adjustments.
   const { data: job, error: jobError } = await supabase
     .from("jobs")
-    .select("price")
+    .select("price, discount, extra")
     .eq("id", jobId)
     .single();
   if (jobError) throw jobError;
@@ -141,7 +148,8 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
 
   // Calculate GST (10% inclusive — Australian standard).
   // amount is the grand total; subtotal is amount / 1.1; gst is the remainder.
-  const total = job.price ?? 0;
+  // The total folds in the job's fixed discount/extra adjustments.
+  const total = jobTotal(job);
   const subtotal = Math.round((total / 1.1) * 100) / 100;
   const gst_amount = Math.round((total - subtotal) * 100) / 100;
 

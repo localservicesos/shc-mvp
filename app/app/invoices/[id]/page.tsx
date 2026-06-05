@@ -44,6 +44,11 @@ export default async function InvoiceDetailPage({
   const customer = job?.customer;
   const vehicle = job?.vehicle;
   const service = job?.service;
+  const discount = job?.discount ?? 0;
+  const extra = job?.extra ?? 0;
+  // Base line item (GST-inclusive). The discount/extra lines below adjust it
+  // down to invoice.amount, which is the authoritative snapshotted total.
+  const basePrice = job?.price ?? invoice.amount;
   const vehicleText = vehicle
     ? [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") ||
       vehicle.plate ||
@@ -195,9 +200,25 @@ export default async function InvoiceDetailPage({
                   ) : null}
                 </td>
                 <td className="py-3 text-right tabular-nums">
-                  {formatMoney(invoice.amount, business?.currency)}
+                  {formatMoney(basePrice, business?.currency)}
                 </td>
               </tr>
+              {discount > 0 ? (
+                <tr className="border-t">
+                  <td className="py-3">Discount</td>
+                  <td className="py-3 text-right tabular-nums">
+                    −{formatMoney(discount, business?.currency)}
+                  </td>
+                </tr>
+              ) : null}
+              {extra > 0 ? (
+                <tr className="border-t">
+                  <td className="py-3">Extra charge</td>
+                  <td className="py-3 text-right tabular-nums">
+                    +{formatMoney(extra, business?.currency)}
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
             <tfoot>
               <tr className="border-t">
