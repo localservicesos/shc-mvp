@@ -136,12 +136,16 @@
 }
 
 /* Center error/info toasts in the exact middle of the screen. Sonner's
-   `top-center` position already centers horizontally (transform: translateX);
-   here we lift it to the vertical center too. Scoped to the single app-wide
-   Toaster, so the attribute selectors are safe. */
+   `top-center` already centers horizontally; here we also center vertically.
+   The toaster `<ol>` has no height (toasts are absolutely positioned), so a
+   plain translateY(-50%) wouldn't move it — we shift it up by half the front
+   toast's measured height (--front-toast-height) so the toast's own center
+   lands on the screen center. Mirrors the inline style in components/ui/sonner.
+   Scoped to the single app-wide Toaster, so the attribute selectors are safe. */
 [data-sonner-toaster][data-y-position="top"] {
   top: 50% !important;
 }
 [data-sonner-toaster][data-x-position="center"] {
-  transform: translate(-50%, -50%) !important;
+  transform: translateX(-50%)
+    translateY(calc(var(--front-toast-height) * -0.5)) !important;
 }
