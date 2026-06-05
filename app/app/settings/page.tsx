@@ -12,12 +12,7 @@ export const metadata = {
   title: "Settings",
 };
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ saved?: string }>;
-}) {
-  const { saved } = await searchParams;
+export default async function SettingsPage() {
   const business = await getCurrentBusiness();
 
   return (
@@ -28,14 +23,6 @@ export default async function SettingsPage({
           Business details shown on invoices and across the app.
         </p>
       </div>
-      {saved ? (
-        <p
-          className="rounded-md border border-green-600/30 bg-green-600/10 px-4 py-2 text-sm text-green-700 dark:text-green-400"
-          role="status"
-        >
-          Settings saved.
-        </p>
-      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>Business details</CardTitle>

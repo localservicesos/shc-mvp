@@ -26,5 +26,5 @@ export async function updateSettingsAction(formData: FormData) {
   await updateBusinessSettings(input);
   // Revalidate the whole app subtree so the sidebar business name refreshes.
   revalidatePath("/app", "layout");
-  redirect("/app/settings?saved=1");
+  redirect(`/app/settings?flash=${encodeURIComponent("Settings saved")}`);
 }
