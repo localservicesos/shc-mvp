@@ -158,6 +158,17 @@ export function JobForm({
       return;
     }
 
+    if (!values.scheduled_start || !values.scheduled_end) {
+      toast.error("Pick a start and end time.");
+      return;
+    }
+
+    // datetime-local strings ("YYYY-MM-DDTHH:MM") compare correctly as text.
+    if (values.scheduled_end <= values.scheduled_start) {
+      toast.error("End must be after start.");
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
       try {
@@ -243,22 +254,28 @@ export function JobForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="scheduled_start">Scheduled start</Label>
+          <Label htmlFor="scheduled_start">
+            Scheduled start <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="scheduled_start"
             name="scheduled_start"
             type="datetime-local"
+            required
             value={values.scheduled_start}
             onChange={(e) => setField("scheduled_start", e.target.value)}
             disabled={isPending}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="scheduled_end">Scheduled end</Label>
+          <Label htmlFor="scheduled_end">
+            Scheduled end <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="scheduled_end"
             name="scheduled_end"
             type="datetime-local"
+            required
             value={values.scheduled_end}
             onChange={(e) => setField("scheduled_end", e.target.value)}
             disabled={isPending}

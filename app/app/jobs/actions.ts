@@ -72,12 +72,22 @@ function parseJobForm(formData: FormData): JobInput {
     throw new Error("Add a reason to cancel.");
   }
 
+  // A job must always have a start and end time.
+  const scheduled_start = optionalDateTime(formData.get("scheduled_start"));
+  const scheduled_end = optionalDateTime(formData.get("scheduled_end"));
+  if (!scheduled_start || !scheduled_end) {
+    throw new Error("Pick a start and end time.");
+  }
+  if (new Date(scheduled_end) <= new Date(scheduled_start)) {
+    throw new Error("End must be after start.");
+  }
+
   return {
     customer_id,
     vehicle_id: optionalString(formData.get("vehicle_id")),
     service_id: optionalString(formData.get("service_id")),
-    scheduled_start: optionalDateTime(formData.get("scheduled_start")),
-    scheduled_end: optionalDateTime(formData.get("scheduled_end")),
+    scheduled_start,
+    scheduled_end,
     status,
     price: optionalPrice(formData.get("price")),
     discount: adjustmentAmount(formData.get("discount"), "Discount"),
