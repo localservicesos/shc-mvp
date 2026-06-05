@@ -185,6 +185,10 @@ sequenceDiagram
   a half-updated job.
 - **Server Action as Use-Case Handler** — one function = one business
   operation.
+- **Pricing as a pure function** — the invoice amount is snapshotted from
+  `jobTotal(job)` = `price − discount + extra` (fixed-amount adjustments only;
+  no percentages or coupons). Keeping the total a pure derivation means the
+  job detail view and the invoice always agree.
 
 ---
 

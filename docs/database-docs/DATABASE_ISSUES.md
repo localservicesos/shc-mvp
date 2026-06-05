@@ -213,8 +213,10 @@ section.
 **Fixed in:** commit `665f93c`
 
 Added `subtotal` (pre-GST amount) and `gst_amount` (10% GST) columns.
-`createInvoiceForJob` now calculates them from `job.price`. Invoice page now
-shows Subtotal / GST (10%) / Total (inc. GST) line items.
+`createInvoiceForJob` calculates them from the adjusted job total
+(`jobTotal(job)` = `price − discount + extra`, migration `0009`). Invoice page
+now shows the service line, optional discount / extra lines, and
+Subtotal / GST (10%) / Total (inc. GST).
 
 Existing rows back-filled: `subtotal = round(amount / 1.1, 2)`.
 

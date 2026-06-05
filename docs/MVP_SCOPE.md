@@ -9,8 +9,9 @@ The first deliverable is an operational web app for **Raphael's car detailing bu
 - Vehicles per customer (make, model, year, color, plate, notes)
 - Services (name, description, base price, active flag)
 - Jobs / bookings linking customer + vehicle + service, with scheduled time and status
+- Per-job price adjustments — a fixed-amount discount and/or extra charge with an optional reason note (job total = base price − discount + extra)
 - Job photos (before / after / other)
-- Invoices generated from a job (draft → sent → paid)
+- Invoices generated from a job (draft → sent → paid), reflecting the adjusted job total
 
 ### Pages
 1. Login
@@ -18,7 +19,7 @@ The first deliverable is an operational web app for **Raphael's car detailing bu
 3. Customers list + create / edit
 4. Customer detail — info, vehicles, past jobs, add vehicle, add job
 5. Jobs list — filter by status, filter by date, create job
-6. Job detail — info, status update, notes, generate invoice; photos built but hidden behind `showPhotos` feature flag (see `app/app/jobs/[id]/page.tsx`)
+6. Job detail — info, status update, notes, pricing breakdown (base / discount / extra / total), generate invoice; photos built but hidden behind `showPhotos` feature flag (see `app/app/jobs/[id]/page.tsx`)
 7. Schedule — daily / weekly list view (no drag and drop)
 8. Invoice — printable / shareable, mark sent, mark paid
 
@@ -43,6 +44,7 @@ The first deliverable is an operational web app for **Raphael's car detailing bu
 - Public booking form
 - Marketing website
 - Drag-and-drop calendar
+- Percentage discounts, coupon codes, or complex tax logic (job adjustments are fixed-amount only)
 
 Anything outside this list is documented in `docs/ROADMAP.md` and **must not** sneak into the MVP.
 
