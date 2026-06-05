@@ -49,7 +49,6 @@ export default async function EditCustomerPage({
               notes: customer.notes ?? "",
             }}
             submitLabel="Save changes"
-            successMessage="Customer updated"
             action={action}
             cancelHref={`/app/customers/${customer.id}`}
           />

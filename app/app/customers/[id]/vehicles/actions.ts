@@ -44,7 +44,9 @@ export async function createVehicleAction(
   const input = parseVehicleForm(customerId, formData);
   await createVehicle(input);
   revalidatePath(`/app/customers/${customerId}`);
-  redirect(`/app/customers/${customerId}`);
+  redirect(
+    `/app/customers/${customerId}?flash=${encodeURIComponent("Vehicle added")}`,
+  );
 }
 
 export async function updateVehicleAction(
@@ -59,7 +61,9 @@ export async function updateVehicleAction(
   void _customer_id;
   await updateVehicle(vehicleId, input);
   revalidatePath(`/app/customers/${customerId}`);
-  redirect(`/app/customers/${customerId}`);
+  redirect(
+    `/app/customers/${customerId}?flash=${encodeURIComponent("Vehicle updated")}`,
+  );
 }
 
 export async function deleteVehicleAction(

@@ -28,7 +28,9 @@ export async function createCustomerAction(formData: FormData) {
   const input = parseCustomerForm(formData);
   const customer = await createCustomer(input);
   revalidatePath("/app/customers");
-  redirect(`/app/customers/${customer.id}`);
+  redirect(
+    `/app/customers/${customer.id}?flash=${encodeURIComponent("Customer created")}`,
+  );
 }
 
 export async function updateCustomerAction(id: string, formData: FormData) {
@@ -36,7 +38,9 @@ export async function updateCustomerAction(id: string, formData: FormData) {
   await updateCustomer(id, input);
   revalidatePath("/app/customers");
   revalidatePath(`/app/customers/${id}`);
-  redirect(`/app/customers/${id}`);
+  redirect(
+    `/app/customers/${id}?flash=${encodeURIComponent("Customer updated")}`,
+  );
 }
 
 export async function deleteCustomerAction(

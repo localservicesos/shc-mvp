@@ -30,7 +30,6 @@ export default function NewCustomerPage() {
         <CardContent>
           <CustomerForm
             submitLabel="Create customer"
-            successMessage="Customer created"
             action={createCustomerAction}
             cancelHref="/app/customers"
           />

@@ -63,8 +63,6 @@ type JobFormProps = {
   vehicles: JobFormVehicle[];
   services: JobFormService[];
   submitLabel: string;
-  /** Green toast shown on success (right before the action redirects away). */
-  successMessage?: string;
   action: (formData: FormData) => Promise<void> | void;
   cancelHref?: string;
   showStatus?: boolean;
@@ -86,7 +84,6 @@ export function JobForm({
   vehicles,
   services,
   submitLabel,
-  successMessage,
   action,
   cancelHref,
   showStatus = false,
@@ -179,11 +176,9 @@ export function JobForm({
         await action(formData);
       } catch (err) {
         // A Server Action that redirects on success throws NEXT_REDIRECT —
-        // that's not an error. Show the success toast and let Next navigate.
-        if (isRedirectError(err)) {
-          if (successMessage) toast.success(successMessage, { duration: 2000 });
-          throw err;
-        }
+        // that's not an error. Let Next navigate (the success toast is shown on
+        // the destination page via FlashToast).
+        if (isRedirectError(err)) throw err;
         toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );

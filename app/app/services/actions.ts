@@ -33,14 +33,14 @@ export async function createServiceAction(formData: FormData) {
   const input = parseServiceForm(formData);
   await createService(input);
   revalidatePath("/app/services");
-  redirect("/app/services");
+  redirect(`/app/services?flash=${encodeURIComponent("Service created")}`);
 }
 
 export async function updateServiceAction(id: string, formData: FormData) {
   const input = parseServiceForm(formData);
   await updateService(id, input);
   revalidatePath("/app/services");
-  redirect("/app/services");
+  redirect(`/app/services?flash=${encodeURIComponent("Service updated")}`);
 }
 
 export async function deleteServiceAction(id: string) {

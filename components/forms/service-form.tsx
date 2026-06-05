@@ -25,8 +25,6 @@ const EMPTY: ServiceFormValues = {
 type ServiceFormProps = {
   initial?: Partial<ServiceFormValues>;
   submitLabel: string;
-  /** Green toast shown on success (right before the action redirects away). */
-  successMessage?: string;
   action: (formData: FormData) => Promise<void> | void;
   cancelHref?: string;
 };
@@ -34,7 +32,6 @@ type ServiceFormProps = {
 export function ServiceForm({
   initial,
   submitLabel,
-  successMessage,
   action,
   cancelHref,
 }: ServiceFormProps) {
@@ -59,10 +56,7 @@ export function ServiceForm({
       try {
         await action(formData);
       } catch (err) {
-        if (isRedirectError(err)) {
-          if (successMessage) toast.success(successMessage, { duration: 2000 });
-          throw err;
-        }
+        if (isRedirectError(err)) throw err;
         toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );

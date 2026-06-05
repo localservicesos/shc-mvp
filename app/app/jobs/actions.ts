@@ -103,7 +103,7 @@ export async function createJobAction(formData: FormData) {
   const job = await createJob(input);
   revalidatePath("/app/jobs");
   revalidatePath(`/app/customers/${input.customer_id}`);
-  redirect(`/app/jobs/${job.id}`);
+  redirect(`/app/jobs/${job.id}?flash=${encodeURIComponent("Job created")}`);
 }
 
 export async function updateJobAction(id: string, formData: FormData) {
@@ -112,7 +112,7 @@ export async function updateJobAction(id: string, formData: FormData) {
   revalidatePath("/app/jobs");
   revalidatePath(`/app/jobs/${id}`);
   revalidatePath(`/app/customers/${input.customer_id}`);
-  redirect(`/app/jobs/${id}`);
+  redirect(`/app/jobs/${id}?flash=${encodeURIComponent("Job updated")}`);
 }
 
 export async function deleteJobAction(

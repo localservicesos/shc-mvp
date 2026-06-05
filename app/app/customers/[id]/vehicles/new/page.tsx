@@ -42,7 +42,6 @@ export default async function NewVehiclePage({
         <CardContent>
           <VehicleForm
             submitLabel="Add vehicle"
-            successMessage="Vehicle added"
             action={action}
             cancelHref={`/app/customers/${customer.id}`}
           />

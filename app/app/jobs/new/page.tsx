@@ -68,7 +68,6 @@ export default async function NewJobPage({
             }}
             lockCustomer={Boolean(params.customer_id)}
             submitLabel="Create job"
-            successMessage="Job created"
             action={createJobAction}
             cancelHref="/app/jobs"
           />
