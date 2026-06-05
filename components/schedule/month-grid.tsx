@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { dateInTimezone, monthGridDays } from "@/lib/utils/date";
+import { dateInTimezone, jobDateKeys, monthGridDays } from "@/lib/utils/date";
 import type { JobStatus, JobWithRelations } from "@/types/jobs";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -43,13 +43,15 @@ export function MonthGrid({
   const days = monthGridDays(monthDate);
   const viewedMonth = monthDate.slice(0, 7);
 
-  // Group jobs by their local date in the business timezone.
+  // Group jobs by every local date they span, so a multi-day booking appears
+  // on each day it covers.
   const jobsByDay = new Map<string, JobWithRelations[]>();
   for (const key of days) jobsByDay.set(key, []);
   for (const job of jobs) {
     if (!job.scheduled_start) continue;
-    const key = dateInTimezone(tz, new Date(job.scheduled_start));
-    jobsByDay.get(key)?.push(job);
+    for (const key of jobDateKeys(job.scheduled_start, job.scheduled_end, tz)) {
+      jobsByDay.get(key)?.push(job);
+    }
   }
 
   return (
@@ -107,9 +109,15 @@ export function MonthGrid({
                         .filter(Boolean)
                         .join(" ") || job.vehicle.plate
                     : null;
+                  // Carrying over from a previous day → show "cont." not the
+                  // original start time.
+                  const isContinuation =
+                    job.scheduled_start != null &&
+                    dateInTimezone(tz, new Date(job.scheduled_start)) !==
+                      dateKey;
                   return (
                     <Link
-                      key={job.id}
+                      key={`${dateKey}-${job.id}`}
                       href={`/app/jobs/${job.id}`}
                       title={`${formatChipTime(job.scheduled_start)} ${
                         job.customer?.name ?? ""
@@ -120,7 +128,9 @@ export function MonthGrid({
                       )}
                     >
                       <span className="tabular-nums opacity-70">
-                        {formatChipTime(job.scheduled_start)}
+                        {isContinuation
+                          ? "cont."
+                          : formatChipTime(job.scheduled_start)}
                       </span>{" "}
                       {job.customer?.name ?? vehicleText ?? "Job"}
                     </Link>

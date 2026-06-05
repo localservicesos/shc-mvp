@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { dateInTimezone, monthGridDays } from "@/lib/utils/date";
+import { jobDateKeys, monthGridDays } from "@/lib/utils/date";
 import type { JobWithRelations } from "@/types/jobs";
 
 const WEEKDAY_INITIALS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -86,12 +86,14 @@ export function YearGrid({
   tz: string;
   todayDate: string;
 }) {
-  // Count jobs per local calendar date in the business timezone.
+  // Count jobs per local calendar date, counting a multi-day booking on each
+  // day it spans so every covered day lights up.
   const jobCounts = new Map<string, number>();
   for (const job of jobs) {
     if (!job.scheduled_start) continue;
-    const key = dateInTimezone(tz, new Date(job.scheduled_start));
-    jobCounts.set(key, (jobCounts.get(key) ?? 0) + 1);
+    for (const key of jobDateKeys(job.scheduled_start, job.scheduled_end, tz)) {
+      jobCounts.set(key, (jobCounts.get(key) ?? 0) + 1);
+    }
   }
 
   return (

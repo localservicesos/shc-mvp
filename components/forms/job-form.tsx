@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
+import { toast } from "sonner";
+import { isRedirectError } from "@/lib/utils/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +93,6 @@ export function JobForm({
     ...EMPTY,
     ...initial,
   });
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const availableVehicles = useMemo(
@@ -152,10 +153,20 @@ export function JobForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
 
     if (values.status === "cancelled" && !values.cancellation_reason.trim()) {
-      setError("Please enter a reason for cancelling.");
+      toast.error("Add a reason to cancel.");
+      return;
+    }
+
+    if (!values.scheduled_start || !values.scheduled_end) {
+      toast.error("Pick a start and end time.");
+      return;
+    }
+
+    // datetime-local strings ("YYYY-MM-DDTHH:MM") compare correctly as text.
+    if (values.scheduled_end <= values.scheduled_start) {
+      toast.error("End date must be after start date.");
       return;
     }
 
@@ -164,7 +175,11 @@ export function JobForm({
       try {
         await action(formData);
       } catch (err) {
-        setError(
+        // A Server Action that redirects on success throws NEXT_REDIRECT —
+        // that's not an error. Let Next navigate (the success toast is shown on
+        // the destination page via FlashToast).
+        if (isRedirectError(err)) throw err;
+        toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );
       }
@@ -244,22 +259,28 @@ export function JobForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="scheduled_start">Scheduled start</Label>
+          <Label htmlFor="scheduled_start">
+            Scheduled start <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="scheduled_start"
             name="scheduled_start"
             type="datetime-local"
+            required
             value={values.scheduled_start}
             onChange={(e) => setField("scheduled_start", e.target.value)}
             disabled={isPending}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="scheduled_end">Scheduled end</Label>
+          <Label htmlFor="scheduled_end">
+            Scheduled end <span className="text-destructive">*</span>
+          </Label>
           <Input
             id="scheduled_end"
             name="scheduled_end"
             type="datetime-local"
+            required
             value={values.scheduled_end}
             onChange={(e) => setField("scheduled_end", e.target.value)}
             disabled={isPending}
@@ -291,9 +312,7 @@ export function JobForm({
               name="status"
               className={cn(selectClass)}
               value={values.status}
-              onChange={(e) =>
-                setField("status", e.target.value as JobStatus)
-              }
+              onChange={(e) => setField("status", e.target.value as JobStatus)}
               disabled={isPending}
             >
               {JOB_STATUSES.map((s) => (
@@ -399,11 +418,6 @@ export function JobForm({
         />
       </div>
 
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Saving…" : submitLabel}

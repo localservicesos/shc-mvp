@@ -43,6 +43,39 @@ export function formatTime(iso: string | null): string {
 }
 
 /**
+ * The local calendar dates (YYYY-MM-DD, business tz) a booking covers, from
+ * its start day through its end day, inclusive. A booking with no end covers
+ * just its start day. The Schedule uses this so a job that runs past midnight
+ * shows on every day it spans, not only the day it started.
+ *
+ * The end is treated as exclusive: a booking ending exactly at 00:00 does NOT
+ * add the next day (we subtract 1ms before reading the end day), so e.g. a job
+ * ending 6 Jun 00:00 stops at 5 Jun.
+ */
+export function jobDateKeys(
+  startIso: string,
+  endIso: string | null,
+  tz: string,
+): string[] {
+  const startKey = dateInTimezone(tz, new Date(startIso));
+  if (!endIso) return [startKey];
+
+  const endMs = new Date(endIso).getTime();
+  if (Number.isNaN(endMs)) return [startKey];
+  const endKey = dateInTimezone(tz, new Date(endMs - 1));
+  if (endKey <= startKey) return [startKey];
+
+  const keys: string[] = [];
+  let cur = startKey;
+  // Cap the walk so a bad/huge range can't loop forever.
+  for (let i = 0; i < 366 && cur <= endKey; i++) {
+    keys.push(cur);
+    cur = shiftDateString(cur, 1);
+  }
+  return keys;
+}
+
+/**
  * Return the calendar date (YYYY-MM-DD) in the given timezone for the
  * provided instant (defaults to now). Uses Intl in 'en-CA' because that
  * locale's short date is ISO-compatible.

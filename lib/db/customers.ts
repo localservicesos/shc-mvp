@@ -110,9 +110,7 @@ export async function deleteCustomer(id: string): Promise<void> {
   // 23503 = foreign_key_violation — customer has job history and cannot be
   // deleted. Surface a friendly message instead of a raw Postgres error.
   if (error?.code === "23503") {
-    throw new Error(
-      "This customer has job history and cannot be deleted. Remove their jobs first.",
-    );
+    throw new Error("Delete this customer's jobs first.");
   }
 
   if (error) throw error;

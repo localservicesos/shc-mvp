@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Mail, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
 import { PrintButton } from "@/components/invoices/print-button";
 import { getCurrentBusiness } from "@/lib/db/current-business";
@@ -105,17 +106,11 @@ export default async function InvoiceDetailPage({
             </form>
           ) : null}
           <PrintButton />
-          <form action={deleteInvoiceAction.bind(null, invoice.id)}>
-            <Button
-              type="submit"
-              size="icon"
-              variant="ghost"
-              aria-label="Delete invoice"
-              title="Delete invoice"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </form>
+          <ConfirmDeleteButton
+            action={deleteInvoiceAction.bind(null, invoice.id)}
+            label="Delete invoice"
+            title="Delete this invoice?"
+          />
         </div>
       </div>
 
@@ -246,7 +241,9 @@ export default async function InvoiceDetailPage({
                 </td>
               </tr>
               <tr>
-                <td className="pt-1 text-sm text-muted-foreground">GST (10%)</td>
+                <td className="pt-1 text-sm text-muted-foreground">
+                  GST (10%)
+                </td>
                 <td className="pt-1 text-right text-sm tabular-nums text-muted-foreground">
                   {formatMoney(invoice.gst_amount, business?.currency)}
                 </td>

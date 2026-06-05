@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import {
   Card,
   CardContent,
@@ -132,18 +133,11 @@ export default async function CustomerDetailPage({
                         <Pencil className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <form
+                    <ConfirmDeleteButton
                       action={deleteVehicleAction.bind(null, customer.id, v.id)}
-                    >
-                      <Button
-                        type="submit"
-                        size="icon"
-                        variant="ghost"
-                        aria-label="Delete vehicle"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </form>
+                      label="Delete vehicle"
+                      title="Delete this vehicle?"
+                    />
                   </div>
                 </li>
               ))}

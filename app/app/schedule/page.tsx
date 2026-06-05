@@ -13,11 +13,12 @@ import { Calendar } from "@/components/schedule/calendar";
 import { MonthGrid } from "@/components/schedule/month-grid";
 import { YearGrid } from "@/components/schedule/year-grid";
 import { getCurrentBusiness } from "@/lib/db/current-business";
-import { listJobsBetween, type JobWithRelations } from "@/lib/db/jobs";
+import { listJobsOverlapping, type JobWithRelations } from "@/lib/db/jobs";
 import {
   dateInTimezone,
   dayRangeFromUtc,
   formatDayLabel,
+  jobDateKeys,
   formatMonthLabel,
   formatTime,
   monthGridDays,
@@ -34,10 +35,11 @@ export const metadata = {
 type ViewMode = "day" | "week" | "month" | "year";
 
 function parseView(value: string | undefined): ViewMode {
-  if (value === "week") return "week";
+  if (value === "day") return "day";
   if (value === "month") return "month";
   if (value === "year") return "year";
-  return "day";
+  // Default (e.g. opening Schedule from the nav) lands on the week view.
+  return "week";
 }
 
 function navHref(view: ViewMode, date: string) {
@@ -83,9 +85,11 @@ export default async function SchedulePage({
   }
 
   const { startUtc, endUtc } = dayRangeFromUtc(tz, fetchStart, fetchDays);
-  const jobs = await listJobsBetween(startUtc, endUtc);
+  const jobs = await listJobsOverlapping(startUtc, endUtc);
 
   // Bucket jobs by local calendar date in the business timezone (mobile list).
+  // A multi-day booking lands in every day it spans, so it shows as a
+  // continuation on each following day rather than only on its start day.
   const days = view === "week" ? 7 : 1;
   const grouped = new Map<string, JobWithRelations[]>();
   for (let i = 0; i < days; i++) {
@@ -93,9 +97,9 @@ export default async function SchedulePage({
   }
   for (const job of jobs) {
     if (!job.scheduled_start) continue;
-    const key = dateInTimezone(tz, new Date(job.scheduled_start));
-    const bucket = grouped.get(key);
-    if (bucket) bucket.push(job);
+    for (const key of jobDateKeys(job.scheduled_start, job.scheduled_end, tz)) {
+      grouped.get(key)?.push(job);
+    }
   }
 
   let prevDate: string;
@@ -249,15 +253,27 @@ export default async function SchedulePage({
                           .filter(Boolean)
                           .join(" ") || job.vehicle.plate
                       : null;
+                    // True on the day(s) after the booking's start day — the
+                    // job is carrying over from midnight, so show "cont."
+                    // instead of the original start time.
+                    const isContinuation =
+                      job.scheduled_start != null &&
+                      dateInTimezone(tz, new Date(job.scheduled_start)) !==
+                        dateKey;
                     return (
-                      <li key={job.id} className="py-3 first:pt-0 last:pb-0">
+                      <li
+                        key={`${dateKey}-${job.id}`}
+                        className="py-3 first:pt-0 last:pb-0"
+                      >
                         <Link
                           href={`/app/jobs/${job.id}`}
                           className="flex items-start justify-between gap-3 rounded-md hover:bg-accent/40"
                         >
                           <div className="flex min-w-0 gap-4">
                             <span className="w-20 shrink-0 text-sm tabular-nums text-muted-foreground">
-                              {formatTime(job.scheduled_start) || "—"}
+                              {isContinuation
+                                ? "cont."
+                                : formatTime(job.scheduled_start) || "—"}
                             </span>
                             <div className="min-w-0 space-y-0.5">
                               <p className="truncate text-sm font-medium">

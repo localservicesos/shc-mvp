@@ -134,3 +134,32 @@
     @apply font-sans;
   }
 }
+
+/* Center error/info toasts in the exact middle of the screen. Sonner's
+   `top-center` already centers horizontally; here we also center vertically.
+   The toaster `<ol>` has no height (toasts are absolutely positioned), so a
+   plain translateY(-50%) wouldn't move it — we shift it up by half the front
+   toast's measured height (--front-toast-height) so the toast's own center
+   lands on the screen center. Mirrors the inline style in components/ui/sonner.
+   Scoped to the single app-wide Toaster, so the attribute selectors are safe. */
+[data-sonner-toaster][data-y-position="top"] {
+  top: 50% !important;
+}
+[data-sonner-toaster][data-x-position="center"] {
+  transform: translateX(-50%)
+    translateY(calc(var(--front-toast-height) * -0.5)) !important;
+}
+
+/* Make the error toast's red a bit more vivid than sonner's pale default.
+   These override the richColors CSS variables; the selector is more specific
+   than sonner's container rule, so no !important is needed. */
+[data-sonner-toast][data-type="error"] {
+  --error-bg: hsl(0 90% 92%);
+  --error-border: hsl(0 84% 72%);
+  --error-text: hsl(0 90% 42%);
+}
+[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] {
+  --error-bg: hsl(0 72% 16%);
+  --error-border: hsl(0 78% 30%);
+  --error-text: hsl(0 100% 83%);
+}

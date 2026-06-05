@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import {
   Table,
   TableBody,
@@ -79,16 +80,11 @@ export function ServicesTable({
                       <Pencil className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <form action={deleteServiceAction.bind(null, s.id)}>
-                    <Button
-                      type="submit"
-                      size="icon"
-                      variant="ghost"
-                      aria-label="Delete service"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </form>
+                  <ConfirmDeleteButton
+                    action={deleteServiceAction.bind(null, s.id)}
+                    label="Delete service"
+                    title="Delete this service?"
+                  />
                 </TableCell>
               </TableRow>
             ))

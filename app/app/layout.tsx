@@ -4,6 +4,7 @@ import { getCurrentBusiness } from "@/lib/db/current-business";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FlashToast } from "@/components/flash-toast";
 
 export default async function AppLayout({
   children,
@@ -51,9 +52,10 @@ export default async function AppLayout({
         <UserMenu email={user.email ?? ""} />
       </aside>
       <main className="relative flex flex-1 flex-col overflow-hidden print:overflow-visible">
+        <FlashToast />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 bg-[url('/bg-studio.webp')] bg-cover bg-center bg-no-repeat opacity-[0.04] dark:opacity-[0.02] print:hidden"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[url('/bg-studio.webp')] bg-cover bg-center bg-no-repeat opacity-[0.05] dark:opacity-[0.05] print:hidden"
         />
         <div className="absolute right-6 top-6 z-20 print:hidden">
           <ThemeToggle />

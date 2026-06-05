@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, type FormEvent } from "react";
+import { toast } from "sonner";
 import { Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,12 +25,10 @@ export function PhotoUploader({
   const [type, setType] = useState<JobPhotoType>("before");
   const [caption, setCaption] = useState("");
   const [fileName, setFileName] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
       try {
@@ -38,9 +37,7 @@ export function PhotoUploader({
         setCaption("");
         setFileName("");
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Upload failed.",
-        );
+        toast.error(err instanceof Error ? err.message : "Upload failed.");
       }
     });
   }
@@ -110,11 +107,6 @@ export function PhotoUploader({
       {fileName ? (
         <p className="truncate text-xs text-muted-foreground">
           Selected: {fileName}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
         </p>
       ) : null}
     </form>

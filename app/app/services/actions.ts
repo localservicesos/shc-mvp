@@ -11,13 +11,13 @@ import {
 
 function parseServiceForm(formData: FormData): ServiceInput {
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) throw new Error("Name is required.");
+  if (!name) throw new Error("Enter a name.");
 
   const description = String(formData.get("description") ?? "").trim();
   const priceRaw = String(formData.get("base_price") ?? "").trim();
   const base_price = priceRaw === "" ? 0 : Number.parseFloat(priceRaw);
   if (Number.isNaN(base_price) || base_price < 0) {
-    throw new Error("Base price must be a non-negative number.");
+    throw new Error("Enter a valid price.");
   }
   const active = formData.get("active") === "on";
 
@@ -33,14 +33,14 @@ export async function createServiceAction(formData: FormData) {
   const input = parseServiceForm(formData);
   await createService(input);
   revalidatePath("/app/services");
-  redirect("/app/services");
+  redirect(`/app/services?flash=${encodeURIComponent("Service created")}`);
 }
 
 export async function updateServiceAction(id: string, formData: FormData) {
   const input = parseServiceForm(formData);
   await updateService(id, input);
   revalidatePath("/app/services");
-  redirect("/app/services");
+  redirect(`/app/services?flash=${encodeURIComponent("Service updated")}`);
 }
 
 export async function deleteServiceAction(id: string) {

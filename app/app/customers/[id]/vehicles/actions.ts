@@ -18,7 +18,7 @@ function optionalYear(value: FormDataEntryValue | null): number | null {
   const v = String(value ?? "").trim();
   if (!v) return null;
   const parsed = Number.parseInt(v, 10);
-  if (Number.isNaN(parsed)) throw new Error("Year must be a number.");
+  if (Number.isNaN(parsed)) throw new Error("Enter a valid year.");
   return parsed;
 }
 
@@ -44,7 +44,9 @@ export async function createVehicleAction(
   const input = parseVehicleForm(customerId, formData);
   await createVehicle(input);
   revalidatePath(`/app/customers/${customerId}`);
-  redirect(`/app/customers/${customerId}`);
+  redirect(
+    `/app/customers/${customerId}?flash=${encodeURIComponent("Vehicle added")}`,
+  );
 }
 
 export async function updateVehicleAction(
@@ -59,7 +61,9 @@ export async function updateVehicleAction(
   void _customer_id;
   await updateVehicle(vehicleId, input);
   revalidatePath(`/app/customers/${customerId}`);
-  redirect(`/app/customers/${customerId}`);
+  redirect(
+    `/app/customers/${customerId}?flash=${encodeURIComponent("Vehicle updated")}`,
+  );
 }
 
 export async function deleteVehicleAction(
