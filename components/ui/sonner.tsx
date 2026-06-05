@@ -57,10 +57,13 @@ export function Toaster(props: ToasterProps) {
         theme={theme as ToasterProps["theme"]}
         position="top-center"
         richColors
-        closeButton
         toastOptions={{
           duration: TOAST_DURATION_MS,
-          style: { fontSize: "15px" },
+          style: {
+            fontSize: "16px",
+            fontWeight: 600,
+            textTransform: "uppercase",
+          },
         }}
         style={
           {
