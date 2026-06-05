@@ -63,6 +63,9 @@ export function Toaster(props: ToasterProps) {
             fontSize: "16px",
             fontWeight: 600,
             textTransform: "uppercase",
+            // Center the icon + text cluster, and center wrapped lines.
+            justifyContent: "center",
+            textAlign: "center",
           },
         }}
         style={
