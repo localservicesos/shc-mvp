@@ -13,7 +13,7 @@ import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { useFilteredIds } from "@/components/search/search-filter-context";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
-import type { JobWithRelations } from "@/types/jobs";
+import { jobTotal, type JobWithRelations } from "@/types/jobs";
 import type { SearchIndexItem } from "@/types/search";
 
 export function JobsTable({
@@ -36,7 +36,7 @@ export function JobsTable({
             <TableHead className="hidden md:table-cell">Vehicle</TableHead>
             <TableHead className="hidden md:table-cell">Plate</TableHead>
             <TableHead className="hidden md:table-cell">Service</TableHead>
-            <TableHead className="text-right">Price</TableHead>
+            <TableHead className="text-right">Total</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -80,7 +80,9 @@ export function JobsTable({
                     {job.service?.name ?? "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {job.price !== null ? formatMoney(job.price) : "—"}
+                    {job.price !== null || job.discount > 0 || job.extra > 0
+                      ? formatMoney(jobTotal(job))
+                      : "—"}
                   </TableCell>
                   <TableCell>
                     <JobStatusBadge status={job.status} />
