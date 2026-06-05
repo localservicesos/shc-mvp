@@ -146,8 +146,25 @@
   top: 50% !important;
 }
 [data-sonner-toaster][data-x-position="center"] {
-  transform: translateX(-50%)
-    translateY(calc(var(--front-toast-height) * -0.5)) !important;
+  transform: translateX(-50%) translateY(calc(var(--front-toast-height) * -0.5)) !important;
+}
+
+/* On mobile (<600px) sonner switches to a full-width layout with left/right
+   gutters plus width: 100%, which can overflow the viewport. Pin the toaster to
+   the viewport center and keep it narrower than the screen. */
+@media (max-width: 600px) {
+  [data-sonner-toaster][data-x-position="center"] {
+    left: 50% !important;
+    right: auto !important;
+    width: min(330px, calc(100vw - 3rem)) !important;
+    transform: translateX(-50%)
+      translateY(calc(var(--front-toast-height) * -0.5)) !important;
+  }
+
+  [data-sonner-toast] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 }
 
 /* Make the error toast's red a bit more vivid than sonner's pale default.
@@ -158,7 +175,8 @@
   --error-border: hsl(0 84% 72%);
   --error-text: hsl(0 90% 42%);
 }
-[data-sonner-toaster][data-sonner-theme="dark"] [data-sonner-toast][data-type="error"] {
+[data-sonner-toaster][data-sonner-theme="dark"]
+  [data-sonner-toast][data-type="error"] {
   --error-bg: hsl(0 72% 16%);
   --error-border: hsl(0 78% 30%);
   --error-text: hsl(0 100% 83%);

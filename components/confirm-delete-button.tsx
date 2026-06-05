@@ -91,7 +91,10 @@ export function ConfirmDeleteButton({
           <Trash2 className={iconClassName} />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        overlayClassName="bg-background/60 backdrop-blur-sm"
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description ? (
