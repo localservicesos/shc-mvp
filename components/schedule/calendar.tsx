@@ -5,7 +5,7 @@ import type { JobWithRelations } from "@/types/jobs";
 import type { JobStatus } from "@/types/jobs";
 
 const GRID_START_HOUR = 7;
-const GRID_END_HOUR = 19;
+const GRID_END_HOUR = 18;
 const HOURS = Array.from(
   { length: GRID_END_HOUR - GRID_START_HOUR },
   (_, i) => i + GRID_START_HOUR,
