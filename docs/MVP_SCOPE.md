@@ -9,6 +9,7 @@ The first deliverable is an operational web app for **Raphael's car detailing bu
 - Vehicles per customer (make, model, year, color, plate, notes)
 - Services (name, description, base price, active flag)
 - Jobs / bookings linking customer + vehicle + service, with scheduled time and status
+- Selecting (or changing) a service sets the job's base price to that service's `base_price`; it can still be overridden manually afterwards
 - Per-job price adjustments — a fixed-amount discount and/or extra charge with an optional reason note (job total = base price − discount + extra)
 - Job photos (before / after / other)
 - Invoices generated from a job (draft → sent → paid), reflecting the adjusted job total
