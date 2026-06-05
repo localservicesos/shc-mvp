@@ -17,11 +17,11 @@ C4Context
     Person(staff, "Staff (future)", "Detailers updating job status")
     System(app, "Local Service OS", "Next.js web app: customers, jobs, schedule, invoices, photos")
     System_Ext(supabase, "Supabase", "Postgres + Auth + Storage")
-    System_Ext(email, "Email provider (future)", "Send invoices — TODO")
+    System_Ext(email, "Resend", "Transactional email — invoice send")
     Rel(owner, app, "Manages bookings, customers, invoices", "HTTPS")
     Rel(staff, app, "Updates job status, uploads photos", "HTTPS")
     Rel(app, supabase, "SQL + Auth + Object storage", "Postgres wire / HTTPS")
-    Rel(app, email, "Sends invoice PDFs (later)", "SMTP/API")
+    Rel(app, email, "Sends invoice emails", "HTTPS API")
 ```
 
 **Pattern:** *C4 Model* — context → container → component → code. Keeps

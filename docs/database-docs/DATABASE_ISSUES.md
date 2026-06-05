@@ -164,11 +164,12 @@ alter table jobs add constraint jobs_schedule_order_chk
 **Files:** `lib/db/customers.ts`, `app/app/customers/[id]/_components/delete-customer-button.tsx`  
 **Fixed in:** commit `503db08`
 
-Added `23503` (foreign_key_violation) catch in `deleteCustomer` with a friendly
-message: *"This customer has job history and cannot be deleted. Remove their jobs first."*
+Added `23503` (foreign_key_violation) catch in `deleteCustomer` with a short
+friendly message: *"Delete this customer's jobs first."*
 
-Created `DeleteCustomerButton` client component using `useActionState` to
-display the error inline below the delete button — no more crash or raw 500.
+`DeleteCustomerButton` now wraps the shared `ConfirmDeleteButton` — a
+confirmation dialog runs the action and surfaces any thrown error as a toast
+(no more crash or raw 500).
 
 ---
 
@@ -178,8 +179,8 @@ display the error inline below the delete button — no more crash or raw 500.
 
 Same pattern as Issue #9. `invoices.job_id` is `ON DELETE RESTRICT` — deleting
 a job with an invoice crashed the page. Added:
-- `23503` catch in `deleteJob` → friendly message: *"This job has an invoice. Void or delete the invoice first."*
-- `DeleteJobButton` component with inline error display.
+- `23503` catch in `deleteJob` → short friendly message: *"Delete this job's invoice first."*
+- `DeleteJobButton` now uses the shared `ConfirmDeleteButton` (confirm dialog + toast on error).
 
 > Note: `job_photos` already uses `ON DELETE CASCADE`, so photos are safely
 > auto-deleted when their job is deleted. Only the invoice FK was the problem.
@@ -234,13 +235,45 @@ Existing rows back-filled: `subtotal = round(amount / 1.1, 2)`.
 ---
 
 ### 13. `services` is missing `duration_minutes`
-**Status:** 🟡 Not fixed
+**Status:** 🟡 Not fixed (double-booking now prevented a different way)
 
-Without a duration, the app cannot auto-calculate `scheduled_end` or prevent
-double-booking.
+Without a duration, the app cannot **auto-calculate** `scheduled_end` from the
+start time. Double-booking itself is already prevented (see Issue #21): every
+job now requires an explicit start **and** end, and overlaps for the same
+vehicle are rejected. A `duration_minutes` would only be a convenience for
+defaulting the end time.
 
 ```sql
 alter table services add column duration_minutes int not null default 60;
+```
+
+---
+
+### 21. ✅ Same vehicle could be double-booked
+**Files:** `supabase/migrations/0011_jobs_vehicle_no_overlap.sql`, `lib/db/jobs.ts`, `types/jobs.ts`  
+**Fixed in:** the double-booking work (migration `0011` + app layer)
+
+Two `booked` jobs could be scheduled for the **same car** at overlapping times.
+Now blocked in two layers:
+
+1. **App layer** — `assertNoVehicleConflict()` runs inside `createJob` /
+   `updateJob` before the write, using the pure `intervalsOverlap()` helper
+   (half-open ranges, so back-to-back bookings are fine). Throws a short,
+   friendly message.
+2. **DB backstop** — a GiST exclusion constraint (`btree_gist`) rejects
+   overlapping `[scheduled_start, scheduled_end)` ranges for the same
+   `vehicle_id` among `booked` jobs (SQLSTATE `23P01`, mapped to the same
+   friendly message). Two **different** cars may still share a slot.
+
+```sql
+alter table jobs
+  add constraint jobs_vehicle_no_overlap
+  exclude using gist (
+    vehicle_id with =,
+    tstzrange(scheduled_start, scheduled_end, '[)') with &&
+  )
+  where (vehicle_id is not null and scheduled_start is not null
+         and scheduled_end is not null and status = 'booked');
 ```
 
 ---
@@ -269,8 +302,10 @@ alter table jobs add column cancellation_reason text;
 ## 🔵 FUTURE SAAS RISKS
 
 ### 16. No soft delete on any table
-All deletes are permanent. No `deleted_at` column anywhere.
-A misclick deletes a customer forever; no undo, no accounting audit trail.
+All deletes are permanent. No `deleted_at` column anywhere. There is still no
+undo or accounting audit trail — but every delete now goes through a
+**confirmation dialog** (`ConfirmDeleteButton`), so a single misclick no longer
+removes data.
 
 **Future migration pattern:**
 ```sql
@@ -338,7 +373,8 @@ create table audit_log (
 | 10 | 🟠 Important | Date filters ignore business timezone | ✅ Fixed — `dayRangeUtc()` |
 | 11 | 🟡 Missing | `businesses` missing ABN, email, phone, address, logo | ✅ Fixed — `0004` migration |
 | 12 | 🟡 Missing | `invoices` missing GST breakdown | ✅ Partial — `0006` migration (due_date/notes deferred) |
-| 13 | 🟡 Missing | `services` missing `duration_minutes` | 🟡 Not fixed |
+| 13 | 🟡 Missing | `services` missing `duration_minutes` | 🟡 Not fixed (only needed to auto-default the end time now) |
+| 21 | 🟠 Important | Same vehicle could be double-booked | ✅ Fixed — `0011` exclusion constraint + app guard |
 | 14 | 🟡 Missing | `jobs` missing `completed_at` | 🟡 Not fixed |
 | 15 | 🟡 Missing | `jobs` missing `cancellation_reason` | 🟡 Not fixed |
 | 16 | 🔵 Future | No soft delete anywhere | 🔵 Future |

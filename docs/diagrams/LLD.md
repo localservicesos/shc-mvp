@@ -22,10 +22,11 @@ flowchart LR
     subgraph Actions["Use-Cases · app/app/*/actions.ts"]
       A1["customers/actions.ts"]
       A2["jobs/actions.ts"]
-      A3["invoices/actions.ts"]
+      A3["invoices/actions.ts<br/><i>incl. email send (Resend)</i>"]
       A4["services/actions.ts"]
       A5["customers/[id]/vehicles/actions.ts"]
       A6["jobs/[id]/photos/actions.ts"]
+      A7["settings/actions.ts"]
     end
 
     subgraph Repos["Data Access · lib/db/*.ts (server-only)"]
@@ -293,7 +294,7 @@ sequenceDiagram
 | One invoice per job | Enforced by `UNIQUE (job_id)` (migration `0003`) — second attempt throws | Allow voids + re-issue once void/credit flow exists |
 | Invoice amount | Snapshotted at insert time as `jobTotal(job)` = `price − discount + extra` (migration `0009`); GST split off it 10%-inclusive (migration `0006`) | Snapshot the discount/extra amounts onto the invoice too, so later job edits can't drift the breakdown |
 | Line items | Single service line + optional discount / extra lines, rendered live from the job relation | Real line-item table when multi-service jobs land |
-| Email send | Not implemented — `sent_at` is set by a manual "Mark as sent" action | Hook a queue + provider (Postmark/Resend) |
+| Email send | Implemented — `sendInvoiceEmailAction` sends via **Resend** and records the attempt in `invoice_emails` (migration `0010`); `sent_at` is also set by the manual "Mark as sent" action | Move to a queue/background worker so a slow provider doesn't block the request |
 
 ---
 
@@ -346,21 +347,33 @@ flowchart LR
 local time disappears from "today" and reappears in "tomorrow". Worth a
 dedicated unit test before any timezone-sensitive feature lands.
 
+**Multi-day bookings.** The Schedule fetches with `listJobsOverlapping(startUtc,
+endUtc)` (start `<` end **and** end `>` start) rather than start-only, so a
+booking that began before the visible range is still loaded. `jobDateKeys(start,
+end, tz)` then lists every local day a booking covers (end treated as exclusive
+at midnight), and each view buckets the job onto all of those days — the day/week
+grid clips it per day and labels the carry-over days "cont.". The grid renders
+07:00–18:00; the view defaults to **Week**.
+
 ---
 
 ## 9. Error Strategy (current state)
 
 | Layer | What it does on error |
 |---|---|
-| `lib/db/*.ts` | Throws on Supabase `error` — never returns `null` for unexpected failures (only for "not found") |
-| Server Actions | Let throws propagate to Next.js error boundary; `redirect()` and `revalidatePath()` only fire on success |
-| Forms (UI) | No client-side validation library yet — relies on HTML5 `required` + server-side throws shown via `error.tsx` |
+| `lib/db/*.ts` | Throws on Supabase `error` — never returns `null` for unexpected failures (only for "not found"). Friendly messages for known cases (e.g. vehicle-overlap `23P01`, FK `23503`) |
+| Server Actions | Let throws propagate; `redirect()` and `revalidatePath()` only fire on success |
+| Forms (UI) | HTML5 `required` + server-side throws are caught in the form's `onSubmit` and shown as a centered **toast** (`toast.error`, via sonner). `isRedirectError()` re-throws the `NEXT_REDIRECT` so a successful redirect isn't mistaken for an error |
+| Success feedback | A `?flash=<message>` param on the post-action redirect fires a green toast on the **destination** page (`components/flash-toast.tsx`), so the short duration isn't lost across navigation |
+| Deletes | Every delete goes through `ConfirmDeleteButton` — a confirmation dialog runs the action and toasts any thrown error |
 | RLS denial | Surfaces as `PGRST116` / empty result — treated as "not found" by repositories |
 
-**Gap to close:** there is no consistent way for forms to render
-field-level validation errors. When this becomes painful (≈ first form
-with >5 fields and conditional rules), introduce `zod` + a `useFormState`
-wrapper at the action boundary.
+**Toasts** are centered on screen (sonner `Toaster` in the root layout,
+`components/ui/sonner.tsx`), with a dim+blur backdrop behind error toasts only.
+Messages are kept short and plain.
+
+**Gap to close:** there is still no shared schema/validation library (e.g. `zod`)
+at the action boundary; validation is ad-hoc `parse*` helpers per action.
 
 ---
 
@@ -377,6 +390,8 @@ wrapper at the action boundary.
 | `0007_simplify_job_statuses.sql` | Collapse job statuses to `booked` / `completed` / `cancelled` |
 | `0008_job_cancellation_reason.sql` | `cancellation_reason` text on jobs |
 | `0009_jobs_discount_extra.sql` | `discount`, `extra` (numeric, ≥ 0) + `adjustment_note` on jobs for fixed-amount price adjustments |
+| `0010_invoice_emails.sql` | `invoice_emails` log table (provider, message id, status, error) for invoice email sends, with RLS scoped by `business_id` |
+| `0011_jobs_vehicle_no_overlap.sql` | GiST exclusion constraint (`btree_gist`) blocking two `booked` jobs for the same `vehicle_id` with overlapping `[scheduled_start, scheduled_end)` ranges — the DB backstop for the no-double-booking rule |
 
 Migrations are the **authoritative schema** — types in `types/*.ts` are
 hand-written to match. When that drift becomes painful, switch to
@@ -394,7 +409,9 @@ hand-written to match. When that drift becomes painful, switch to
 3. **Multi-business switching UI** — `getCurrentBusiness()` is a stub for
    single-business assumption. Real fix is a `default_business_id` on
    `profiles` + a switcher in the layout.
-4. **Background jobs** — none yet. First need will likely be invoice email
-   send; pick `pg-boss` or Supabase Edge Functions then.
+4. **Background jobs** — none yet. Invoice email send now runs **synchronously**
+   in the Server Action via Resend (logged in `invoice_emails`); move it to a
+   queue (`pg-boss` / Supabase Edge Functions) once send volume or provider
+   latency makes the inline call a problem.
 5. **Audit trail** — no `audit_log` table yet. Add when staff role lands
    and "who changed this?" becomes a real question.

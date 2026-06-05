@@ -23,13 +23,21 @@ See [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) for what is in and out of scope, and
 ## Features
 
 - Customers, vehicles, and services CRUD
-- Jobs / bookings with a `booked → completed / cancelled` status flow
+- Jobs / bookings with a `booked → completed / cancelled` status flow; every job
+  requires a start **and** end time
+- **No double-booking the same vehicle** — the same car can't be booked for
+  overlapping times (enforced in the server action and by a Postgres exclusion
+  constraint); two different cars may share a slot
 - Per-job fixed-amount **discount / extra charge** with an optional reason note
   (job total = base price − discount + extra)
-- Dashboard (today, upcoming, in-progress, ready) and a timezone-correct
-  schedule view
+- Dashboard (today, upcoming) and a timezone-correct schedule view (Day / Week /
+  Month / Year) that defaults to **Week**, runs 7am–6pm, and shows a multi-day
+  booking on every day it spans
 - Invoice generation from a job — GST breakdown, discount/extra line items,
-  mark sent / paid, printable page
+  mark sent / paid, printable page, and **email delivery via Resend**
+- Business **settings** page (name, ABN, contact details, logo)
+- App-wide feedback: centered **toast** notifications (errors + success) and a
+  **confirmation dialog before every delete**
 - Job photo upload via Supabase Storage (built, currently behind a feature flag)
 
 ## Getting started
