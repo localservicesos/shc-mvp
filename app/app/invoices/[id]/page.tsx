@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Mail, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
 import { PrintButton } from "@/components/invoices/print-button";
@@ -11,8 +11,8 @@ import { formatScheduled } from "@/lib/utils/date";
 import {
   deleteInvoiceAction,
   markInvoicePaidAction,
-  markInvoiceSentAction,
   markInvoiceVoidAction,
+  sendInvoiceEmailAction,
 } from "../actions";
 
 export const metadata = {
@@ -74,9 +74,19 @@ export default async function InvoiceDetailPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {invoice.status === "draft" ? (
-            <form action={markInvoiceSentAction.bind(null, invoice.id)}>
-              <Button type="submit" size="sm">
-                Mark as sent
+            <form action={sendInvoiceEmailAction.bind(null, invoice.id)}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!customer?.email}
+                title={
+                  customer?.email
+                    ? "Send invoice by email"
+                    : "Add a customer email before sending"
+                }
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                {customer?.email ? "Send email" : "No customer email"}
               </Button>
             </form>
           ) : null}
@@ -112,13 +122,21 @@ export default async function InvoiceDetailPage({
       <article className="rounded-lg border bg-card p-8 shadow-xs print:border-0 print:shadow-none">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/sunshine-hot-cars-logo.avif"
+              alt="Sunshine Hot Cars"
+              className="mb-4 h-20 w-auto rounded-md bg-white p-2 object-contain"
+            />
+            <p className="text-xs uppercase tracking-wider text-muted-foreground leading-tight">
               From
             </p>
-            <p className="text-lg font-semibold">{business?.name ?? "—"}</p>
-            {business?.abn ? (
-              <p className="text-xs text-muted-foreground">ABN {business.abn}</p>
-            ) : null}
+            <p className="mt-1 text-lg font-semibold leading-tight">
+              {business?.name ?? "—"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground leading-tight">
+              ABN {business?.abn ?? "not set"}
+            </p>
             {business?.phone ? (
               <p className="text-xs text-muted-foreground">{business.phone}</p>
             ) : null}
@@ -263,7 +281,6 @@ export default async function InvoiceDetailPage({
               <span>· Paid {formatDate(invoice.paid_at)}</span>
             ) : null}
           </p>
-          {/* TODO: integrate email send (e.g. Resend) when invoice is marked sent */}
         </footer>
       </article>
 

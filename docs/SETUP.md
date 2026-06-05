@@ -18,7 +18,7 @@ Always use `bun` — never `npm`, `pnpm`, or `yarn`. Only `bun.lockb` is committ
 ## 2. Configure environment variables
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env.local
 ```
 
 Fill in your values from the Supabase Dashboard:
@@ -29,8 +29,11 @@ Fill in your values from the Supabase Dashboard:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Settings → API → anon / public | App (client + server) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Settings → API → service_role | Server scripts only — **never expose in browser** |
 | `DATABASE_URL` | Settings → Database → Connection string (URI) | `bun run migrate:*` scripts only |
+| `RESEND_API_KEY` | Resend → API Keys | Server invoice email sending |
+| `INVOICE_FROM_EMAIL` | Verified Resend domain | Sender shown to invoice recipients |
+| `INVOICE_REPLY_TO_EMAIL` | Business inbox | Optional reply-to for invoice emails |
 
-`.env.local` is gitignored. Only `.env.local.example` is committed.
+`.env.local` is gitignored. Only `.env.example` is committed.
 
 ## 3. Apply database migrations
 
