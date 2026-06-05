@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +19,10 @@ export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
     setIsPending(true);
 
     const supabase = createClient();
@@ -33,7 +32,7 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setError(signInError.message);
+      toast.error(signInError.message);
       setIsPending(false);
       return;
     }
@@ -76,11 +75,6 @@ export function LoginForm() {
               disabled={isPending}
             />
           </div>
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
           <Button type="submit" disabled={isPending}>
             {isPending ? "Signing in…" : "Sign in"}
           </Button>

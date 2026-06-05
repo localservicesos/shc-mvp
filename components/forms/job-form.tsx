@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +92,6 @@ export function JobForm({
     ...EMPTY,
     ...initial,
   });
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const availableVehicles = useMemo(
@@ -152,10 +152,9 @@ export function JobForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
 
     if (values.status === "cancelled" && !values.cancellation_reason.trim()) {
-      setError("Please enter a reason for cancelling.");
+      toast.error("Please enter a reason for cancelling.");
       return;
     }
 
@@ -164,7 +163,7 @@ export function JobForm({
       try {
         await action(formData);
       } catch (err) {
-        setError(
+        toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );
       }
@@ -399,11 +398,6 @@ export function JobForm({
         />
       </div>
 
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Saving…" : submitLabel}

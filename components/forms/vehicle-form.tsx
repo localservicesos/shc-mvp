@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +42,6 @@ export function VehicleForm({
     ...EMPTY,
     ...initial,
   });
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function setField<K extends keyof VehicleFormValues>(
@@ -53,14 +53,13 @@ export function VehicleForm({
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
 
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
       try {
         await action(formData);
       } catch (err) {
-        setError(
+        toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );
       }
@@ -138,11 +137,6 @@ export function VehicleForm({
           disabled={isPending}
         />
       </div>
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={isPending}>
           {isPending ? "Saving…" : submitLabel}

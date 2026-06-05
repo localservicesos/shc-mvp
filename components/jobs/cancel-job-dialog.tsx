@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,30 +19,31 @@ import { cancelJobAction } from "@/app/app/jobs/actions";
 export function CancelJobDialog({ jobId }: { jobId: string }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
-  const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   function handleOpenChange(next: boolean) {
     if (!isPending) {
       setOpen(next);
-      if (!next) {
-        setReason("");
-        setError("");
-      }
+      if (!next) setReason("");
     }
   }
 
   function handleConfirm() {
     if (!reason.trim()) {
-      setError("Please enter a reason for cancelling.");
+      toast.error("Please enter a reason for cancelling.");
       textareaRef.current?.focus();
       return;
     }
-    setError("");
     startTransition(async () => {
-      await cancelJobAction(jobId, reason.trim());
-      setOpen(false);
+      try {
+        await cancelJobAction(jobId, reason.trim());
+        setOpen(false);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to cancel the job.",
+        );
+      }
     });
   }
 
@@ -71,16 +73,10 @@ export function CancelJobDialog({ jobId }: { jobId: string }) {
             ref={textareaRef}
             placeholder="e.g. Customer rescheduled, vehicle not available…"
             value={reason}
-            onChange={(e) => {
-              setReason(e.target.value);
-              if (e.target.value.trim()) setError("");
-            }}
+            onChange={(e) => setReason(e.target.value)}
             rows={3}
             disabled={isPending}
           />
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
         </div>
 
         <DialogFooter className="gap-2">
