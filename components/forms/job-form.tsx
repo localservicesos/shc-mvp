@@ -143,11 +143,10 @@ export function JobForm({
     setValues((prev) => ({
       ...prev,
       service_id: serviceId,
-      // Auto-fill price from service unless the user has already typed one.
-      price:
-        service
-          ? service.base_price.toString()
-          : prev.price,
+      // Set the price to the selected service's base price; clearing the
+      // service leaves the current price untouched. The user can still edit
+      // the price afterwards.
+      price: service ? service.base_price.toString() : prev.price,
     }));
   }
 
