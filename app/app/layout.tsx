@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
@@ -52,7 +53,9 @@ export default async function AppLayout({
         <UserMenu email={user.email ?? ""} />
       </aside>
       <main className="relative flex flex-1 flex-col overflow-hidden print:overflow-visible">
-        <FlashToast />
+        <Suspense fallback={null}>
+          <FlashToast />
+        </Suspense>
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-[url('/bg-studio.webp')] bg-cover bg-center bg-no-repeat opacity-[0.05] dark:opacity-[0.05] print:hidden"
