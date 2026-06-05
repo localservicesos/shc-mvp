@@ -44,7 +44,7 @@ function normalizeJob(job: JobWithRelations): JobWithRelations {
  * No-ops when the job has no vehicle or no start time (nothing to overlap).
  * Throws a friendly error when a conflicting booking exists. This runs on the
  * server (createJob/updateJob), so it can't be bypassed from the client; the
- * DB exclusion constraint in migration 0010 is the final backstop.
+ * DB exclusion constraint in migration 0011 is the final backstop.
  */
 async function assertNoVehicleConflict(
   vehicleId: string | null | undefined,
