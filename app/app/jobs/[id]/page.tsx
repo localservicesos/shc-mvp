@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { JobStatusActions } from "@/components/jobs/status-actions";
-import { getJob } from "@/lib/db/jobs";
+import { getJob, jobTotal } from "@/lib/db/jobs";
 import { getInvoiceByJob } from "@/lib/db/invoices";
 import { listJobPhotos } from "@/lib/db/job-photos";
 import { formatMoney } from "@/lib/utils/format";
@@ -42,6 +42,9 @@ export default async function JobDetailPage({
   ]);
 
   const uploadAction = uploadJobPhotoAction.bind(null, job.id);
+
+  const hasAdjustment = job.discount > 0 || job.extra > 0;
+  const total = jobTotal(job);
 
   const vehicleText = job.vehicle
     ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
@@ -155,13 +158,43 @@ export default async function JobDetailPage({
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Price</CardTitle>
+            <CardTitle className="text-base">Pricing</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm tabular-nums">
-            {job.price !== null ? (
-              formatMoney(job.price)
-            ) : (
+          <CardContent className="space-y-1.5 text-sm">
+            {job.price === null && !hasAdjustment ? (
               <span className="text-muted-foreground">—</span>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-muted-foreground">
+                  <span>Base price</span>
+                  <span className="tabular-nums">{formatMoney(job.price)}</span>
+                </div>
+                {job.discount > 0 ? (
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Discount</span>
+                    <span className="tabular-nums">
+                      −{formatMoney(job.discount)}
+                    </span>
+                  </div>
+                ) : null}
+                {job.extra > 0 ? (
+                  <div className="flex items-center justify-between text-muted-foreground">
+                    <span>Extra charge</span>
+                    <span className="tabular-nums">
+                      +{formatMoney(job.extra)}
+                    </span>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between border-t pt-1.5 font-medium">
+                  <span>Total</span>
+                  <span className="tabular-nums">{formatMoney(total)}</span>
+                </div>
+                {job.adjustment_note ? (
+                  <p className="pt-1 text-xs text-muted-foreground">
+                    {job.adjustment_note}
+                  </p>
+                ) : null}
+              </>
             )}
           </CardContent>
         </Card>
