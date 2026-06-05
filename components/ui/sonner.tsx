@@ -1,30 +1,14 @@
 "use client";
 
+import { type CSSProperties } from "react";
 import { useTheme } from "next-themes";
 import { createPortal } from "react-dom";
-import {
-  Toaster as Sonner,
-  toast,
-  useSonner,
-  type ToasterProps,
-} from "sonner";
+import { Toaster as Sonner, toast, useSonner, type ToasterProps } from "sonner";
 
-/**
- * How long a toast stays on screen before auto-dismissing, in milliseconds.
- * Change this single value to tune the timeout for every toast. Individual
- * toasts can still override it per call, e.g. `toast.error(msg, { duration:
- * 10000 })`, or `{ duration: Infinity }` to make it stay until dismissed.
- */
-const TOAST_DURATION_MS = 6000;
+const TOAST_DURATION_MS = 10000;
 
-/** Just below sonner's toast layer (z-index 999999999) so the toast stays crisp. */
 const BACKDROP_Z_INDEX = 999999998;
 
-/**
- * Dims + blurs the whole screen while any toast is visible — the same backdrop
- * treatment the Dashboard search uses (see components/search/search-bar.tsx).
- * Clicking it dismisses the toasts, like tapping outside a modal.
- */
 function ToastBackdrop() {
   const { toasts } = useSonner();
   const hasToasts = toasts.length > 0;
@@ -72,12 +56,19 @@ export function Toaster(props: ToasterProps) {
         position="top-center"
         richColors
         closeButton
-        toastOptions={{ duration: TOAST_DURATION_MS }}
-        style={{
-          top: "50%",
-          transform:
-            "translateX(-50%) translateY(calc(var(--front-toast-height) * -0.5))",
+        toastOptions={{
+          duration: TOAST_DURATION_MS,
+          style: { fontSize: "15px" },
         }}
+        style={
+          {
+            top: "50%",
+            transform:
+              "translateX(-50%) translateY(calc(var(--front-toast-height) * -0.5))",
+            // Wider than sonner's 356px default.
+            "--width": "420px",
+          } as CSSProperties
+        }
         {...props}
       />
     </>
