@@ -35,10 +35,11 @@ export const metadata = {
 type ViewMode = "day" | "week" | "month" | "year";
 
 function parseView(value: string | undefined): ViewMode {
-  if (value === "week") return "week";
+  if (value === "day") return "day";
   if (value === "month") return "month";
   if (value === "year") return "year";
-  return "day";
+  // Default (e.g. opening Schedule from the nav) lands on the week view.
+  return "week";
 }
 
 function navHref(view: ViewMode, date: string) {
