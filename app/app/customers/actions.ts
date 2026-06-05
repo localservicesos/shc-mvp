@@ -12,7 +12,7 @@ import { toTitleCase } from "@/lib/utils/format";
 
 function parseCustomerForm(formData: FormData): CustomerInput {
   const name = toTitleCase(String(formData.get("name") ?? "").trim());
-  if (!name) throw new Error("Name is required.");
+  if (!name) throw new Error("Enter a name.");
 
   const fields = ["phone", "email", "address", "notes"] as const;
   const optional: Partial<CustomerInput> = {};

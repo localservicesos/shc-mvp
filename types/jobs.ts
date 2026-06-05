@@ -58,8 +58,7 @@ export function jobTotal(job: {
  * Two jobs may share a time slot, but the SAME car cannot be booked twice for
  * overlapping times. This is the user-facing message shown when that happens.
  */
-export const VEHICLE_CONFLICT_MESSAGE =
-  "This vehicle is already booked for an overlapping time. The same car can't be in two places at once — pick a different time or vehicle.";
+export const VEHICLE_CONFLICT_MESSAGE = "This car is already booked at this time.";
 
 /**
  * Do two scheduled intervals overlap? Intervals are half-open [start, end), so

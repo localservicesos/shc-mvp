@@ -189,9 +189,7 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
     throw error;
   }
 
-  throw new Error(
-    "Could not allocate a unique invoice number after several attempts. Please try again.",
-  );
+  throw new Error("Couldn't create the invoice. Try again.");
 }
 
 export async function markInvoiceSent(id: string): Promise<Invoice> {

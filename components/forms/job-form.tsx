@@ -154,7 +154,7 @@ export function JobForm({
     event.preventDefault();
 
     if (values.status === "cancelled" && !values.cancellation_reason.trim()) {
-      toast.error("Please enter a reason for cancelling.");
+      toast.error("Add a reason to cancel.");
       return;
     }
 

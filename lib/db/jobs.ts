@@ -79,7 +79,7 @@ async function assertNoVehicleConflict(
       : null;
     if (intervalsOverlap(startMs, endMs, otherStart, otherEnd)) {
       const when = formatScheduled(job.scheduled_start as string);
-      throw new Error(`${VEHICLE_CONFLICT_MESSAGE} (existing booking: ${when})`);
+      throw new Error(`This car is already booked at ${when}.`);
     }
   }
 }
@@ -259,14 +259,12 @@ export async function deleteJob(id: string): Promise<void> {
     .maybeSingle();
 
   if (job?.status === "completed") {
-    throw new Error("Completed jobs cannot be deleted.");
+    throw new Error("Completed jobs can't be deleted.");
   }
 
   const { error } = await supabase.from("jobs").delete().eq("id", id);
   if (error?.code === "23503") {
-    throw new Error(
-      "This job has an invoice. Void or delete the invoice first, then delete the job.",
-    );
+    throw new Error("Delete this job's invoice first.");
   }
   if (error) throw error;
 }

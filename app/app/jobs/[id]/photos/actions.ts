@@ -17,7 +17,7 @@ export async function uploadJobPhotoAction(
     throw new Error("Pick a file to upload.");
   }
   if (file.size > 10 * 1024 * 1024) {
-    throw new Error("File is too large (max 10MB).");
+    throw new Error("File too large (max 10MB).");
   }
 
   const typeRaw = String(formData.get("type") ?? "other");

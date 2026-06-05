@@ -21,7 +21,7 @@ function optionalPrice(value: FormDataEntryValue | null): number | null {
   if (!v) return null;
   const parsed = Number.parseFloat(v);
   if (Number.isNaN(parsed) || parsed < 0) {
-    throw new Error("Price must be a non-negative number.");
+    throw new Error("Enter a valid price.");
   }
   return parsed;
 }
@@ -35,7 +35,7 @@ function adjustmentAmount(
   if (!v) return 0;
   const parsed = Number.parseFloat(v);
   if (Number.isNaN(parsed) || parsed < 0) {
-    throw new Error(`${label} must be a non-negative number.`);
+    throw new Error(`Enter a valid ${label.toLowerCase()}.`);
   }
   return parsed;
 }
@@ -49,14 +49,14 @@ function optionalDateTime(value: FormDataEntryValue | null): string | null {
   // trust the browser's local time matches the business timezone.
   const date = new Date(v);
   if (Number.isNaN(date.getTime())) {
-    throw new Error("Scheduled time is invalid.");
+    throw new Error("Invalid date or time.");
   }
   return date.toISOString();
 }
 
 function parseJobForm(formData: FormData): JobInput {
   const customer_id = String(formData.get("customer_id") ?? "").trim();
-  if (!customer_id) throw new Error("Customer is required.");
+  if (!customer_id) throw new Error("Pick a customer.");
 
   const statusRaw = String(formData.get("status") ?? "booked");
   const status = JOB_STATUSES.includes(statusRaw as JobStatus)
@@ -69,7 +69,7 @@ function parseJobForm(formData: FormData): JobInput {
       : null;
 
   if (status === "cancelled" && !cancellation_reason) {
-    throw new Error("Cancellation reason is required.");
+    throw new Error("Add a reason to cancel.");
   }
 
   return {
@@ -140,7 +140,7 @@ export async function cancelJobAction(
   reason: string,
 ): Promise<void> {
   const trimmed = reason.trim();
-  if (!trimmed) throw new Error("Cancellation reason is required.");
+  if (!trimmed) throw new Error("Add a reason to cancel.");
   await updateJob(id, { status: "cancelled", cancellation_reason: trimmed });
   revalidatePath("/app/jobs");
   revalidatePath(`/app/jobs/${id}`);

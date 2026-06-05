@@ -31,7 +31,7 @@ export function CancelJobDialog({ jobId }: { jobId: string }) {
 
   function handleConfirm() {
     if (!reason.trim()) {
-      toast.error("Please enter a reason for cancelling.");
+      toast.error("Add a reason to cancel.");
       textareaRef.current?.focus();
       return;
     }
