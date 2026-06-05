@@ -26,6 +26,20 @@ function optionalPrice(value: FormDataEntryValue | null): number | null {
   return parsed;
 }
 
+/** A discount/extra amount: defaults to 0, must be non-negative. */
+function adjustmentAmount(
+  value: FormDataEntryValue | null,
+  label: string,
+): number {
+  const v = String(value ?? "").trim();
+  if (!v) return 0;
+  const parsed = Number.parseFloat(v);
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new Error(`${label} must be a non-negative number.`);
+  }
+  return parsed;
+}
+
 function optionalDateTime(value: FormDataEntryValue | null): string | null {
   const v = String(value ?? "").trim();
   if (!v) return null;
@@ -66,6 +80,9 @@ function parseJobForm(formData: FormData): JobInput {
     scheduled_end: optionalDateTime(formData.get("scheduled_end")),
     status,
     price: optionalPrice(formData.get("price")),
+    discount: adjustmentAmount(formData.get("discount"), "Discount"),
+    extra: adjustmentAmount(formData.get("extra"), "Extra"),
+    adjustment_note: optionalString(formData.get("adjustment_note")),
     notes: optionalString(formData.get("notes")),
     cancellation_reason,
   };

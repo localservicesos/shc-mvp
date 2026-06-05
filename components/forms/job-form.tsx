@@ -9,8 +9,10 @@ import { cn } from "@/lib/utils";
 import {
   JOB_STATUSES,
   JOB_STATUS_LABELS,
+  jobTotal,
   type JobStatus,
 } from "@/types/jobs";
+import { formatMoney } from "@/lib/utils/format";
 
 export type JobFormCustomer = { id: string; name: string };
 export type JobFormVehicle = {
@@ -31,6 +33,9 @@ export type JobFormValues = {
   scheduled_end: string;
   status: JobStatus;
   price: string;
+  discount: string;
+  extra: string;
+  adjustment_note: string;
   notes: string;
   cancellation_reason: string;
 };
@@ -43,6 +48,9 @@ const EMPTY: JobFormValues = {
   scheduled_end: "",
   status: "booked",
   price: "",
+  discount: "",
+  extra: "",
+  adjustment_note: "",
   notes: "",
   cancellation_reason: "",
 };
@@ -93,6 +101,21 @@ export function JobForm({
         : [],
     [values.customer_id, vehicles],
   );
+
+  // Live job total: price - discount + extra (clamped at 0). Mirrors the
+  // server-side jobTotal() so the user sees exactly what will be invoiced.
+  const total = useMemo(
+    () =>
+      jobTotal({
+        price: values.price === "" ? null : Number.parseFloat(values.price),
+        discount:
+          values.discount === "" ? 0 : Number.parseFloat(values.discount),
+        extra: values.extra === "" ? 0 : Number.parseFloat(values.extra),
+      }),
+    [values.price, values.discount, values.extra],
+  );
+
+  const hasAdjustment = values.discount !== "" || values.extra !== "";
 
   function setField<K extends keyof JobFormValues>(
     key: K,
@@ -284,6 +307,65 @@ export function JobForm({
         ) : (
           <input type="hidden" name="status" value={values.status} />
         )}
+      </div>
+
+      <div className="rounded-md border bg-muted/30 p-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="discount">Discount (AUD)</Label>
+            <Input
+              id="discount"
+              name="discount"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              placeholder="0.00"
+              value={values.discount}
+              onChange={(e) => setField("discount", e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="extra">Extra charge (AUD)</Label>
+            <Input
+              id="extra"
+              name="extra"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="0.01"
+              placeholder="0.00"
+              value={values.extra}
+              onChange={(e) => setField("extra", e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+        </div>
+
+        {hasAdjustment ? (
+          <div className="mt-4 flex flex-col gap-2">
+            <Label htmlFor="adjustment_note">Reason for adjustment</Label>
+            <Textarea
+              id="adjustment_note"
+              name="adjustment_note"
+              rows={2}
+              placeholder="e.g. Repeat-customer discount, extra-dirty vehicle…"
+              value={values.adjustment_note}
+              onChange={(e) => setField("adjustment_note", e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="adjustment_note" value="" />
+        )}
+
+        <div className="mt-4 flex items-center justify-between border-t pt-3">
+          <span className="text-sm text-muted-foreground">Job total</span>
+          <span className="text-base font-semibold tabular-nums">
+            {formatMoney(total)}
+          </span>
+        </div>
       </div>
 
       {values.status === "cancelled" ? (

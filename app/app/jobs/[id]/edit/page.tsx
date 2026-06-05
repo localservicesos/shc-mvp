@@ -81,6 +81,9 @@ export default async function EditJobPage({
               scheduled_end: toDateTimeLocalValue(job.scheduled_end),
               status: job.status,
               price: job.price !== null ? job.price.toString() : "",
+              discount: job.discount ? job.discount.toString() : "",
+              extra: job.extra ? job.extra.toString() : "",
+              adjustment_note: job.adjustment_note ?? "",
               notes: job.notes ?? "",
               cancellation_reason: job.cancellation_reason ?? "",
             }}
