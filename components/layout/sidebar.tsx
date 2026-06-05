@@ -26,11 +26,37 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/schedule", label: "Schedule", icon: Calendar },
   { href: "/app/invoices", label: "Invoices", icon: FileText },
   { href: "/app/services", label: "Services", icon: Wrench },
-  { href: "/app/settings", label: "Settings", icon: Settings },
 ];
+
+// Pinned to the bottom of the sidebar, above the user menu.
+const SETTINGS_ITEM: NavItem = {
+  href: "/app/settings",
+  label: "Settings",
+  icon: Settings,
+};
 
 export function Sidebar({ businessName }: { businessName: string }) {
   const pathname = usePathname();
+
+  function renderLink(item: NavItem) {
+    const isActive =
+      pathname === item.href || pathname.startsWith(`${item.href}/`);
+    const Icon = item.icon;
+    return (
+      <Link
+        href={item.href}
+        className={cn(
+          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {item.label}
+      </Link>
+    );
+  }
 
   return (
     <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4">
@@ -46,28 +72,11 @@ export function Sidebar({ businessName }: { businessName: string }) {
         />
       </Link>
       <ul className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            </li>
-          );
-        })}
+        {NAV_ITEMS.map((item) => (
+          <li key={item.href}>{renderLink(item)}</li>
+        ))}
       </ul>
+      <div className="mt-auto border-t pt-2">{renderLink(SETTINGS_ITEM)}</div>
     </nav>
   );
 }
