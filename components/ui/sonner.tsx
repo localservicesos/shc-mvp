@@ -60,7 +60,7 @@ export function Toaster(props: ToasterProps) {
         toastOptions={{
           duration: TOAST_DURATION_MS,
           style: {
-            fontSize: "16px",
+            fontSize: "17px",
             fontWeight: 600,
             textTransform: "uppercase",
             // Center the icon + text cluster, and center wrapped lines.
