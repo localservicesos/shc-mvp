@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
+import { isRedirectError } from "@/lib/utils/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +29,8 @@ const EMPTY: VehicleFormValues = {
 type VehicleFormProps = {
   initial?: Partial<VehicleFormValues>;
   submitLabel: string;
+  /** Green toast shown on success (right before the action redirects away). */
+  successMessage?: string;
   action: (formData: FormData) => Promise<void> | void;
   cancelHref?: string;
 };
@@ -35,6 +38,7 @@ type VehicleFormProps = {
 export function VehicleForm({
   initial,
   submitLabel,
+  successMessage,
   action,
   cancelHref,
 }: VehicleFormProps) {
@@ -59,6 +63,10 @@ export function VehicleForm({
       try {
         await action(formData);
       } catch (err) {
+        if (isRedirectError(err)) {
+          if (successMessage) toast.success(successMessage);
+          throw err;
+        }
         toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );

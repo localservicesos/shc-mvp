@@ -89,6 +89,7 @@ export default async function EditJobPage({
             }}
             showStatus
             submitLabel="Save changes"
+            successMessage="Job updated"
             action={action}
             cancelHref={`/app/jobs/${job.id}`}
           />

@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
+import { isRedirectError } from "@/lib/utils/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,8 @@ const EMPTY: ServiceFormValues = {
 type ServiceFormProps = {
   initial?: Partial<ServiceFormValues>;
   submitLabel: string;
+  /** Green toast shown on success (right before the action redirects away). */
+  successMessage?: string;
   action: (formData: FormData) => Promise<void> | void;
   cancelHref?: string;
 };
@@ -31,6 +34,7 @@ type ServiceFormProps = {
 export function ServiceForm({
   initial,
   submitLabel,
+  successMessage,
   action,
   cancelHref,
 }: ServiceFormProps) {
@@ -55,6 +59,10 @@ export function ServiceForm({
       try {
         await action(formData);
       } catch (err) {
+        if (isRedirectError(err)) {
+          if (successMessage) toast.success(successMessage);
+          throw err;
+        }
         toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );

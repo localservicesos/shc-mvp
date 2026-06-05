@@ -30,6 +30,7 @@ export default function NewServicePage() {
         <CardContent>
           <ServiceForm
             submitLabel="Create service"
+            successMessage="Service created"
             action={createServiceAction}
             cancelHref="/app/services"
           />

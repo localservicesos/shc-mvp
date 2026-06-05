@@ -56,6 +56,7 @@ export default async function EditVehiclePage({
               notes: vehicle.notes ?? "",
             }}
             submitLabel="Save changes"
+            successMessage="Vehicle updated"
             action={action}
             cancelHref={`/app/customers/${customer.id}`}
           />

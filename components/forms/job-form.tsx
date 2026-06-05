@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { toast } from "sonner";
+import { isRedirectError } from "@/lib/utils/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +63,8 @@ type JobFormProps = {
   vehicles: JobFormVehicle[];
   services: JobFormService[];
   submitLabel: string;
+  /** Green toast shown on success (right before the action redirects away). */
+  successMessage?: string;
   action: (formData: FormData) => Promise<void> | void;
   cancelHref?: string;
   showStatus?: boolean;
@@ -83,6 +86,7 @@ export function JobForm({
   vehicles,
   services,
   submitLabel,
+  successMessage,
   action,
   cancelHref,
   showStatus = false,
@@ -174,6 +178,12 @@ export function JobForm({
       try {
         await action(formData);
       } catch (err) {
+        // A Server Action that redirects on success throws NEXT_REDIRECT —
+        // that's not an error. Show the success toast and let Next navigate.
+        if (isRedirectError(err)) {
+          if (successMessage) toast.success(successMessage);
+          throw err;
+        }
         toast.error(
           err instanceof Error ? err.message : "Something went wrong.",
         );

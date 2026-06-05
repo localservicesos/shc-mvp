@@ -48,6 +48,7 @@ export default async function EditServicePage({
               active: service.active,
             }}
             submitLabel="Save changes"
+            successMessage="Service updated"
             action={action}
             cancelHref="/app/services"
           />

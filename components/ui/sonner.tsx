@@ -11,9 +11,11 @@ const BACKDROP_Z_INDEX = 999999998;
 
 function ToastBackdrop() {
   const { toasts } = useSonner();
-  const hasToasts = toasts.length > 0;
+  // Only error toasts dim + blur the screen (they need attention). Success/info
+  // toasts are non-blocking, so they don't darken the page.
+  const hasErrorToast = toasts.some((t) => t.type === "error");
 
-  if (!hasToasts || typeof document === "undefined") return null;
+  if (!hasErrorToast || typeof document === "undefined") return null;
 
   return createPortal(
     <div
