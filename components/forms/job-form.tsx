@@ -145,7 +145,7 @@ export function JobForm({
       service_id: serviceId,
       // Auto-fill price from service unless the user has already typed one.
       price:
-        prev.price === "" && service
+        service
           ? service.base_price.toString()
           : prev.price,
     }));
