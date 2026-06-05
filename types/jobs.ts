@@ -30,11 +30,29 @@ export type Job = {
   scheduled_end: string | null;
   status: JobStatus;
   price: number | null;
+  discount: number;
+  extra: number;
+  adjustment_note: string | null;
   notes: string | null;
   cancellation_reason: string | null;
   created_at: string;
   updated_at: string;
 };
+
+/**
+ * The job's final total: base price, minus a fixed discount, plus a fixed
+ * extra charge. Never negative. This is the single source of truth used by
+ * both the job detail view and invoice generation.
+ */
+export function jobTotal(job: {
+  price: number | null;
+  discount?: number | null;
+  extra?: number | null;
+}): number {
+  const base = job.price ?? 0;
+  const total = base - (job.discount ?? 0) + (job.extra ?? 0);
+  return Math.max(0, Math.round(total * 100) / 100);
+}
 
 export type JobWithRelations = Job & {
   customer: Pick<Customer, "id" | "name"> | null;
@@ -53,6 +71,9 @@ export type JobInput = {
   scheduled_end?: string | null;
   status?: JobStatus;
   price?: number | null;
+  discount?: number | null;
+  extra?: number | null;
+  adjustment_note?: string | null;
   notes?: string | null;
   cancellation_reason?: string | null;
 };
