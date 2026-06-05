@@ -9,12 +9,19 @@ import {
   markInvoiceSent,
   markInvoiceVoid,
 } from "@/lib/db/invoices";
+import { sendInvoiceEmail } from "@/lib/email/send-invoice-email";
 
 export async function generateInvoiceFromJobAction(jobId: string) {
   const invoice = await createInvoiceForJob(jobId);
   revalidatePath("/app/invoices");
   revalidatePath(`/app/jobs/${jobId}`);
   redirect(`/app/invoices/${invoice.id}`);
+}
+
+export async function sendInvoiceEmailAction(id: string) {
+  await sendInvoiceEmail(id);
+  revalidatePath("/app/invoices");
+  revalidatePath(`/app/invoices/${id}`);
 }
 
 export async function markInvoiceSentAction(id: string) {
