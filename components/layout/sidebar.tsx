@@ -7,6 +7,7 @@ import {
   ClipboardList,
   FileText,
   LayoutDashboard,
+  Settings,
   Users,
   Wrench,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/schedule", label: "Schedule", icon: Calendar },
   { href: "/app/invoices", label: "Invoices", icon: FileText },
   { href: "/app/services", label: "Services", icon: Wrench },
+  { href: "/app/settings", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar({ businessName }: { businessName: string }) {
