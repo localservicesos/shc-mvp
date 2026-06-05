@@ -51,6 +51,17 @@ export function SettingsForm({ initial, action }: SettingsFormProps) {
       try {
         await action(formData);
       } catch (err) {
+        // redirect() throws a NEXT_REDIRECT control-flow error that must
+        // propagate to Next.js — don't swallow it as a form error.
+        if (
+          err &&
+          typeof err === "object" &&
+          "digest" in err &&
+          typeof err.digest === "string" &&
+          err.digest.startsWith("NEXT_REDIRECT")
+        ) {
+          throw err;
+        }
         setError(err instanceof Error ? err.message : "Something went wrong.");
       }
     });
