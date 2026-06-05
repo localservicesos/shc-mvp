@@ -76,7 +76,7 @@ export function Sidebar({ businessName }: { businessName: string }) {
           <li key={item.href}>{renderLink(item)}</li>
         ))}
       </ul>
-      <div className="mt-auto border-t pt-2">{renderLink(SETTINGS_ITEM)}</div>
+      <div className="mt-auto">{renderLink(SETTINGS_ITEM)}</div>
     </nav>
   );
 }
