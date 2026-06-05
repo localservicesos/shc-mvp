@@ -1,8 +1,12 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
-import { dayRangeUtc } from "@/lib/utils/date";
+import { dayRangeUtc, formatScheduled } from "@/lib/utils/date";
 import { toTitleCase } from "@/lib/utils/format";
+import {
+  VEHICLE_CONFLICT_MESSAGE,
+  intervalsOverlap,
+} from "@/types/jobs";
 import type {
   Job,
   JobInput,
@@ -16,7 +20,12 @@ export type {
   JobStatus,
   JobWithRelations,
 } from "@/types/jobs";
-export { JOB_STATUSES, JOB_STATUS_LABELS, jobTotal } from "@/types/jobs";
+export {
+  JOB_STATUSES,
+  JOB_STATUS_LABELS,
+  VEHICLE_CONFLICT_MESSAGE,
+  jobTotal,
+} from "@/types/jobs";
 
 const RELATIONS =
   "*, customer:customers(id, name), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, base_price)";
@@ -25,6 +34,64 @@ const RELATIONS =
 function normalizeJob(job: JobWithRelations): JobWithRelations {
   if (!job.customer) return job;
   return { ...job, customer: { ...job.customer, name: toTitleCase(job.customer.name) } };
+}
+
+/**
+ * Guard against double-booking the SAME vehicle. Two different cars may share a
+ * time slot, but one car cannot be booked for two overlapping times. Only
+ * active ("booked") jobs reserve the slot — cancelled/completed jobs don't.
+ *
+ * No-ops when the job has no vehicle or no start time (nothing to overlap).
+ * Throws a friendly error when a conflicting booking exists. This runs on the
+ * server (createJob/updateJob), so it can't be bypassed from the client; the
+ * DB exclusion constraint in migration 0010 is the final backstop.
+ */
+async function assertNoVehicleConflict(
+  vehicleId: string | null | undefined,
+  start: string | null | undefined,
+  end: string | null | undefined,
+  excludeJobId?: string,
+): Promise<void> {
+  if (!vehicleId || !start) return;
+
+  const startMs = Date.parse(start);
+  const endMs = end ? Date.parse(end) : null;
+  if (Number.isNaN(startMs)) return;
+
+  const supabase = await createClient();
+  let query = supabase
+    .from("jobs")
+    .select("id, scheduled_start, scheduled_end")
+    .eq("vehicle_id", vehicleId)
+    .eq("status", "booked")
+    .not("scheduled_start", "is", null);
+
+  if (excludeJobId) query = query.neq("id", excludeJobId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  for (const job of data ?? []) {
+    const otherStart = Date.parse(job.scheduled_start as string);
+    if (Number.isNaN(otherStart)) continue;
+    const otherEnd = job.scheduled_end
+      ? Date.parse(job.scheduled_end as string)
+      : null;
+    if (intervalsOverlap(startMs, endMs, otherStart, otherEnd)) {
+      const when = formatScheduled(job.scheduled_start as string);
+      throw new Error(`${VEHICLE_CONFLICT_MESSAGE} (existing booking: ${when})`);
+    }
+  }
+}
+
+/** Postgres exclusion-constraint violation — the DB-level double-booking guard. */
+function isVehicleOverlapViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "23P01"
+  );
 }
 
 export type ListJobsFilters = {
@@ -83,6 +150,14 @@ export async function createJob(input: JobInput): Promise<Job> {
   const business = await getCurrentBusiness();
   if (!business) throw new Error("No current business");
 
+  if ((input.status ?? "booked") === "booked") {
+    await assertNoVehicleConflict(
+      input.vehicle_id,
+      input.scheduled_start,
+      input.scheduled_end,
+    );
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("jobs")
@@ -103,6 +178,7 @@ export async function createJob(input: JobInput): Promise<Job> {
     .select("*")
     .single();
 
+  if (isVehicleOverlapViolation(error)) throw new Error(VEHICLE_CONFLICT_MESSAGE);
   if (error) throw error;
   return data as Job;
 }
@@ -130,6 +206,37 @@ export async function updateJob(
   if (input.cancellation_reason !== undefined)
     patch.cancellation_reason = input.cancellation_reason;
 
+  // Re-check for a same-vehicle double-booking when this update could change
+  // which slot the car occupies (vehicle, times, or status). Merge the patch
+  // over the current row so omitted fields keep their existing values.
+  const touchesSchedule =
+    input.vehicle_id !== undefined ||
+    input.scheduled_start !== undefined ||
+    input.scheduled_end !== undefined ||
+    input.status !== undefined;
+
+  if (touchesSchedule) {
+    const { data: current } = await supabase
+      .from("jobs")
+      .select("vehicle_id, scheduled_start, scheduled_end, status")
+      .eq("id", id)
+      .maybeSingle();
+
+    const nextStatus = (input.status ?? current?.status) as JobStatus;
+    if (nextStatus === "booked") {
+      await assertNoVehicleConflict(
+        input.vehicle_id !== undefined ? input.vehicle_id : current?.vehicle_id,
+        input.scheduled_start !== undefined
+          ? input.scheduled_start
+          : current?.scheduled_start,
+        input.scheduled_end !== undefined
+          ? input.scheduled_end
+          : current?.scheduled_end,
+        id,
+      );
+    }
+  }
+
   const { data, error } = await supabase
     .from("jobs")
     .update(patch)
@@ -137,6 +244,7 @@ export async function updateJob(
     .select("*")
     .single();
 
+  if (isVehicleOverlapViolation(error)) throw new Error(VEHICLE_CONFLICT_MESSAGE);
   if (error) throw error;
   return data as Job;
 }

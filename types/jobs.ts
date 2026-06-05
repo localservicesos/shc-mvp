@@ -54,6 +54,33 @@ export function jobTotal(job: {
   return Math.max(0, Math.round(total * 100) / 100);
 }
 
+/**
+ * Two jobs may share a time slot, but the SAME car cannot be booked twice for
+ * overlapping times. This is the user-facing message shown when that happens.
+ */
+export const VEHICLE_CONFLICT_MESSAGE =
+  "This vehicle is already booked for an overlapping time. The same car can't be in two places at once — pick a different time or vehicle.";
+
+/**
+ * Do two scheduled intervals overlap? Intervals are half-open [start, end), so
+ * back-to-back bookings (one ending exactly when the next starts) do NOT
+ * conflict. A job with no end time is treated as a zero-length point at its
+ * start, so an exact same-start collision still counts as an overlap.
+ *
+ * All arguments are epoch milliseconds; `aEnd`/`bEnd` may be null (no end set).
+ */
+export function intervalsOverlap(
+  aStart: number,
+  aEnd: number | null,
+  bStart: number,
+  bEnd: number | null,
+): boolean {
+  if (aStart === bStart) return true;
+  const aE = aEnd ?? aStart;
+  const bE = bEnd ?? bStart;
+  return aStart < bE && bStart < aE;
+}
+
 export type JobWithRelations = Job & {
   customer: Pick<Customer, "id" | "name"> | null;
   vehicle: Pick<
