@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
 import { PrintButton } from "@/components/invoices/print-button";
 import { getCurrentBusiness } from "@/lib/db/current-business";
@@ -95,17 +96,11 @@ export default async function InvoiceDetailPage({
             </form>
           ) : null}
           <PrintButton />
-          <form action={deleteInvoiceAction.bind(null, invoice.id)}>
-            <Button
-              type="submit"
-              size="icon"
-              variant="ghost"
-              aria-label="Delete invoice"
-              title="Delete invoice"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </form>
+          <ConfirmDeleteButton
+            action={deleteInvoiceAction.bind(null, invoice.id)}
+            label="Delete invoice"
+            title="Delete this invoice?"
+          />
         </div>
       </div>
 

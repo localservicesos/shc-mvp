@@ -1,11 +1,10 @@
-import { Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   JOB_PHOTO_TYPES,
   JOB_PHOTO_TYPE_LABELS,
   type JobPhotoType,
   type JobPhotoWithSignedUrl,
 } from "@/types/job-photos";
+import { ConfirmDeleteButton } from "@/components/confirm-delete-button";
 import { deleteJobPhotoAction } from "@/app/app/jobs/[id]/photos/actions";
 
 export function PhotoGrid({
@@ -67,20 +66,14 @@ export function PhotoGrid({
                       {p.caption}
                     </p>
                   ) : null}
-                  <form
+                  <ConfirmDeleteButton
                     action={deleteJobPhotoAction.bind(null, jobId, p.id)}
-                    className="absolute right-1 top-1 opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    <Button
-                      type="submit"
-                      size="icon"
-                      variant="destructive"
-                      aria-label="Delete photo"
-                      className="h-7 w-7"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </form>
+                    label="Delete photo"
+                    title="Delete this photo?"
+                    variant="destructive"
+                    className="absolute right-1 top-1 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
+                    iconClassName="h-3.5 w-3.5"
+                  />
                 </li>
               ))}
             </ul>
