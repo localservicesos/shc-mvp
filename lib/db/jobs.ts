@@ -16,7 +16,7 @@ export type {
   JobStatus,
   JobWithRelations,
 } from "@/types/jobs";
-export { JOB_STATUSES, JOB_STATUS_LABELS } from "@/types/jobs";
+export { JOB_STATUSES, JOB_STATUS_LABELS, jobTotal } from "@/types/jobs";
 
 const RELATIONS =
   "*, customer:customers(id, name), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, base_price)";
@@ -95,6 +95,9 @@ export async function createJob(input: JobInput): Promise<Job> {
       scheduled_end: input.scheduled_end ?? null,
       status: input.status ?? "booked",
       price: input.price ?? null,
+      discount: input.discount ?? 0,
+      extra: input.extra ?? 0,
+      adjustment_note: input.adjustment_note ?? null,
       notes: input.notes ?? null,
     })
     .select("*")
@@ -119,6 +122,10 @@ export async function updateJob(
     patch.scheduled_end = input.scheduled_end;
   if (input.status !== undefined) patch.status = input.status;
   if (input.price !== undefined) patch.price = input.price;
+  if (input.discount !== undefined) patch.discount = input.discount;
+  if (input.extra !== undefined) patch.extra = input.extra;
+  if (input.adjustment_note !== undefined)
+    patch.adjustment_note = input.adjustment_note;
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.cancellation_reason !== undefined)
     patch.cancellation_reason = input.cancellation_reason;

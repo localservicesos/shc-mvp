@@ -5,7 +5,7 @@ import { toTitleCase } from "@/lib/utils/format";
 import type { Customer } from "@/lib/db/customers";
 import type { Vehicle } from "@/lib/db/vehicles";
 import type { Service } from "@/lib/db/services";
-import type { Job } from "@/types/jobs";
+import { jobTotal, type Job } from "@/types/jobs";
 import type { Invoice, InvoiceStatus } from "@/types/invoices";
 
 export type { Invoice, InvoiceStatus } from "@/types/invoices";
@@ -15,7 +15,14 @@ export type InvoiceWithRelations = Invoice & {
   job:
     | (Pick<
         Job,
-        "id" | "scheduled_start" | "scheduled_end" | "notes" | "price"
+        | "id"
+        | "scheduled_start"
+        | "scheduled_end"
+        | "notes"
+        | "price"
+        | "discount"
+        | "extra"
+        | "adjustment_note"
       > & {
         customer: Pick<
           Customer,
@@ -31,7 +38,7 @@ export type InvoiceWithRelations = Invoice & {
 };
 
 const RELATIONS =
-  "*, job:jobs(id, scheduled_start, scheduled_end, notes, price, customer:customers(id, name, phone, email, address), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, description))";
+  "*, job:jobs(id, scheduled_start, scheduled_end, notes, price, discount, extra, adjustment_note, customer:customers(id, name, phone, email, address), vehicle:vehicles(id, make, model, year, color, plate), service:services(id, name, description))";
 
 /** Title-case the invoice's customer name and address for consistent display. */
 function normalizeInvoice(invoice: InvoiceWithRelations): InvoiceWithRelations {
@@ -95,28 +102,32 @@ export async function getInvoiceByJob(
 
 /**
  * Generate the next invoice number for a business. Format: INV-0001.
- * Uses MAX(invoice_number) and increments; safe enough for the MVP
- * (single-user). When concurrent invoice creation becomes a real concern,
- * promote this to a Postgres sequence or a SECURITY DEFINER function.
+ *
+ * Derives the next number from the highest *numeric* invoice number in use —
+ * not the most recently created one. Ordering by created_at was unsafe:
+ * after an invoice is deleted and regenerated, the newest row can carry a
+ * lower number than an existing one, producing a duplicate that violates the
+ * `unique (business_id, invoice_number)` constraint.
+ *
+ * Still not concurrency-proof on its own (two callers can read the same max);
+ * `createInvoiceForJob` retries on the resulting 23505. Promote to a Postgres
+ * sequence / SECURITY DEFINER function when multi-user load is real.
  */
 async function nextInvoiceNumber(businessId: string): Promise<string> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("invoices")
     .select("invoice_number")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq("business_id", businessId);
 
   if (error) throw error;
 
-  let next = 1;
-  if (data?.invoice_number) {
-    const match = /(\d+)/.exec(data.invoice_number);
-    if (match) next = Number.parseInt(match[1], 10) + 1;
+  let max = 0;
+  for (const row of data ?? []) {
+    const match = /(\d+)/.exec(row.invoice_number ?? "");
+    if (match) max = Math.max(max, Number.parseInt(match[1], 10));
   }
-  return `INV-${String(next).padStart(4, "0")}`;
+  return `INV-${String(max + 1).padStart(4, "0")}`;
 }
 
 export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
@@ -129,46 +140,58 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
   const existing = await getInvoiceByJob(jobId);
   if (existing) return existing;
 
-  // Snapshot the job's current price.
+  // Snapshot the job's current price and adjustments.
   const { data: job, error: jobError } = await supabase
     .from("jobs")
-    .select("price")
+    .select("price, discount, extra")
     .eq("id", jobId)
     .single();
   if (jobError) throw jobError;
 
-  const invoice_number = await nextInvoiceNumber(business.id);
-
   // Calculate GST (10% inclusive — Australian standard).
   // amount is the grand total; subtotal is amount / 1.1; gst is the remainder.
-  const total = job.price ?? 0;
+  // The total folds in the job's fixed discount/extra adjustments.
+  const total = jobTotal(job);
   const subtotal = Math.round((total / 1.1) * 100) / 100;
   const gst_amount = Math.round((total - subtotal) * 100) / 100;
 
-  const { data, error } = await supabase
-    .from("invoices")
-    .insert({
-      business_id: business.id,
-      job_id: jobId,
-      invoice_number,
-      subtotal,
-      gst_amount,
-      amount: total,
-      status: "draft" as InvoiceStatus,
-    })
-    .select("*")
-    .single();
+  // Retry to absorb 23505 (unique_violation) collisions. Two constraints can
+  // fire: `invoices_job_id_uk` (job already invoiced) and
+  // `unique (business_id, invoice_number)` (number already taken). We allocate
+  // a fresh number each attempt so a number clash resolves on the next pass.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const invoice_number = await nextInvoiceNumber(business.id);
 
-  // 23505 = unique_violation — a concurrent request already created the
-  // invoice between our check above and this insert. Return that invoice
-  // instead of throwing an error.
-  if (error?.code === "23505") {
-    const race = await getInvoiceByJob(jobId);
-    if (race) return race;
+    const { data, error } = await supabase
+      .from("invoices")
+      .insert({
+        business_id: business.id,
+        job_id: jobId,
+        invoice_number,
+        subtotal,
+        gst_amount,
+        amount: total,
+        status: "draft" as InvoiceStatus,
+      })
+      .select("*")
+      .single();
+
+    if (!error) return data as Invoice;
+
+    if (error.code === "23505") {
+      // job_id collision → a concurrent request already invoiced this job;
+      // return the winner. Otherwise it's an invoice_number clash → retry.
+      const race = await getInvoiceByJob(jobId);
+      if (race) return race;
+      continue;
+    }
+
+    throw error;
   }
 
-  if (error) throw error;
-  return data as Invoice;
+  throw new Error(
+    "Could not allocate a unique invoice number after several attempts. Please try again.",
+  );
 }
 
 export async function markInvoiceSent(id: string): Promise<Invoice> {

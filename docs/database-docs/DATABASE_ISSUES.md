@@ -59,15 +59,24 @@ the race — returns the winning concurrent insert instead of throwing.
 
 ---
 
-### 4. Race condition: duplicate invoice numbers possible
-**File:** `lib/db/invoices.ts` lines 82–100  
-**Status:** ⏳ Deferred — acceptable for single-user MVP
+### 4. ✅ Duplicate invoice numbers possible
+**File:** `lib/db/invoices.ts`  
+**Status:** ✅ Fixed (app layer) — sequence/SECURITY DEFINER still deferred
 
-`nextInvoiceNumber()` reads the latest invoice then increments in application
-code. Under concurrent load, two requests can read the same "latest" and
-generate the **same `INV-XXXX` number**.
+Two problems, both fixed in `createInvoiceForJob` / `nextInvoiceNumber`:
 
-**Fix (future):** Replace with a `SECURITY DEFINER` Postgres function or sequence:
+1. **Stale max.** `nextInvoiceNumber()` picked the *most recently created*
+   invoice and incremented it. After an invoice was deleted and regenerated,
+   the newest row could carry a lower number than an existing one, so the next
+   number duplicated an in-use one and hit `unique (business_id, invoice_number)`
+   (error `23505`) — which the old catch (job_id only) rethrew. Now it derives
+   the next number from the **highest numeric** `invoice_number` in use.
+2. **Concurrency.** Two callers can still read the same max. `createInvoiceForJob`
+   now retries up to 5 times, distinguishing a `job_id` clash (return the
+   existing invoice) from an `invoice_number` clash (re-allocate and retry).
+
+**Fix (future, for true multi-user):** Replace the app-side max with a
+`SECURITY DEFINER` Postgres function or sequence:
 ```sql
 create or replace function next_invoice_number(p_business_id uuid)
 returns text language plpgsql security definer as $$
@@ -213,8 +222,10 @@ section.
 **Fixed in:** commit `665f93c`
 
 Added `subtotal` (pre-GST amount) and `gst_amount` (10% GST) columns.
-`createInvoiceForJob` now calculates them from `job.price`. Invoice page now
-shows Subtotal / GST (10%) / Total (inc. GST) line items.
+`createInvoiceForJob` calculates them from the adjusted job total
+(`jobTotal(job)` = `price − discount + extra`, migration `0009`). Invoice page
+now shows the service line, optional discount / extra lines, and
+Subtotal / GST (10%) / Total (inc. GST).
 
 Existing rows back-filled: `subtotal = round(amount / 1.1, 2)`.
 
@@ -317,7 +328,7 @@ create table audit_log (
 | 1 | 🔴 Critical | No INSERT RLS on `businesses` | ⏭️ Skipped (single-user MVP) |
 | 2 | 🔴 Critical | No INSERT/UPDATE/DELETE RLS on `business_members` | ⏭️ Skipped (single-user MVP) |
 | 3 | 🔴 Critical | Duplicate invoice race condition | ✅ Fixed — `0003` migration + app layer |
-| 4 | 🔴 Critical | Invoice number race condition in app code | ⏳ Deferred |
+| 4 | 🔴 Critical | Duplicate invoice numbers (stale max + race) | ✅ Fixed — max-based numbering + retry |
 | 5 | 🔴 Critical | Invoice status transitions not guarded | ⏭️ Skipped (UI guards transitions) |
 | 6 | 🟠 Important | Denormalized `business_id` can drift on vehicles & photos | 🟠 Not fixed |
 | 7 | 🟠 Important | `vehicles.plate` not unique | ✅ Fixed — `0005` migration |

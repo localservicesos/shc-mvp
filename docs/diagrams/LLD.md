@@ -291,7 +291,8 @@ sequenceDiagram
 |---|---|---|
 | Invoice number race condition | `MAX(invoice_number)+1` — two concurrent calls can collide on the next-number lookup, but the `UNIQUE (business_id, invoice_number)` index will reject the second insert | Move to a per-business Postgres `SEQUENCE` or `INSERT … RETURNING` with a CTE |
 | One invoice per job | Enforced by `UNIQUE (job_id)` (migration `0003`) — second attempt throws | Allow voids + re-issue once void/credit flow exists |
-| GST calculation | Computed at insert time from amount + flag (migration `0006`) | Add line-item invoices when multi-service jobs land |
+| Invoice amount | Snapshotted at insert time as `jobTotal(job)` = `price − discount + extra` (migration `0009`); GST split off it 10%-inclusive (migration `0006`) | Snapshot the discount/extra amounts onto the invoice too, so later job edits can't drift the breakdown |
+| Line items | Single service line + optional discount / extra lines, rendered live from the job relation | Real line-item table when multi-service jobs land |
 | Email send | Not implemented — `sent_at` is set by a manual "Mark as sent" action | Hook a queue + provider (Postmark/Resend) |
 
 ---
@@ -373,6 +374,9 @@ wrapper at the action boundary.
 | `0004_businesses_contact_fields.sql` | ABN, email, phone, address, logo_url on businesses (needed for printable invoices) |
 | `0005_data_quality_constraints.sql` | NOT NULL + CHECK constraints tightening MVP assumptions |
 | `0006_invoices_gst.sql` | GST breakdown columns for Australian tax compliance |
+| `0007_simplify_job_statuses.sql` | Collapse job statuses to `booked` / `completed` / `cancelled` |
+| `0008_job_cancellation_reason.sql` | `cancellation_reason` text on jobs |
+| `0009_jobs_discount_extra.sql` | `discount`, `extra` (numeric, ≥ 0) + `adjustment_note` on jobs for fixed-amount price adjustments |
 
 Migrations are the **authoritative schema** — types in `types/*.ts` are
 hand-written to match. When that drift becomes painful, switch to
