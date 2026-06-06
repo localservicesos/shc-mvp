@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n -B1 -A8 'jobs/\\\\${job\\\\|href={`/app/jobs/\\\\|key={job' app/app/jobs/page.tsx)",
+      "Bash(bunx playwright *)",
+      "Bash(git ls-remote *)"
+    ]
+  }
+}
