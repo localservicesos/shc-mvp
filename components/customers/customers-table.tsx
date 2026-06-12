@@ -25,13 +25,15 @@ export function CustomersTable({
 
   return (
     <div className="rounded-md border">
-      <Table>
+      {/* Slightly smaller text on tablet, where the narrow sidebar still
+          leaves limited room for four text-heavy columns. */}
+      <Table className="md:max-lg:text-[13px]">
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
             <TableHead>Phone</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead className="hidden md:table-cell">Address</TableHead>
+            <TableHead className="hidden sm:table-cell">Email</TableHead>
+            <TableHead className="hidden lg:table-cell">Address</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -47,7 +49,7 @@ export function CustomersTable({
           ) : (
             rows.map((c) => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium">
+                <TableCell className="whitespace-normal font-medium">
                   <Link
                     href={`/app/customers/${c.id}`}
                     className="hover:underline"
@@ -56,8 +58,10 @@ export function CustomersTable({
                   </Link>
                 </TableCell>
                 <TableCell>{c.phone ?? "—"}</TableCell>
-                <TableCell>{c.email ?? "—"}</TableCell>
-                <TableCell className="hidden md:table-cell">
+                <TableCell className="hidden sm:table-cell">
+                  {c.email ?? "—"}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
                   {c.address ?? "—"}
                 </TableCell>
               </TableRow>

@@ -127,7 +127,11 @@ export default async function SchedulePage({
     <div
       className={cn(
         "flex flex-col gap-6",
-        fitToViewport && "md:h-full md:min-h-0",
+        // The week grid needs ~640px, which tablets don't have next to the
+        // sidebar — they get the stacked day list instead, so only pin the
+        // page to the viewport where the grid actually shows.
+        fitToViewport &&
+          (days > 1 ? "lg:h-full lg:min-h-0" : "md:h-full md:min-h-0"),
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -146,8 +150,8 @@ export default async function SchedulePage({
             href={navHref("day", selectedDate)}
             className={
               view === "day"
-                ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
-                : "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                ? "rounded-sm bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-foreground"
+                : "rounded-sm px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
             }
           >
             Day
@@ -156,8 +160,8 @@ export default async function SchedulePage({
             href={navHref("week", startDate)}
             className={
               view === "week"
-                ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
-                : "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                ? "rounded-sm bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-foreground"
+                : "rounded-sm px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
             }
           >
             Week
@@ -166,8 +170,8 @@ export default async function SchedulePage({
             href={navHref("month", startDate)}
             className={
               view === "month"
-                ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
-                : "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                ? "rounded-sm bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-foreground"
+                : "rounded-sm px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
             }
           >
             Month
@@ -176,8 +180,8 @@ export default async function SchedulePage({
             href={navHref("year", startDate)}
             className={
               view === "year"
-                ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
-                : "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                ? "rounded-sm bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-foreground"
+                : "rounded-sm px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
             }
           >
             Year
@@ -216,7 +220,12 @@ export default async function SchedulePage({
         />
       ) : (
         <>
-      <div className="hidden min-h-0 flex-1 md:block">
+      <div
+        className={cn(
+          "hidden min-h-0 flex-1",
+          days > 1 ? "lg:block" : "md:block",
+        )}
+      >
         <Calendar
           startDate={startDate}
           days={days}
@@ -226,7 +235,7 @@ export default async function SchedulePage({
         />
       </div>
 
-      <div className="space-y-4 md:hidden">
+      <div className={cn("space-y-4", days > 1 ? "lg:hidden" : "md:hidden")}>
         {Array.from(grouped.entries()).map(([dateKey, dayJobs]) => (
           <Card key={dateKey}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">

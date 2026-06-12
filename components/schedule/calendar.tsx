@@ -260,7 +260,14 @@ export function Calendar({
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-md border bg-background">
       <div className="flex min-h-0 flex-1 overflow-x-auto">
-        <div className="flex min-h-0 w-full min-w-[640px] flex-col">
+        <div
+          className={cn(
+            "flex min-h-0 w-full flex-col",
+            // Only the multi-day week grid needs a floor before it scrolls
+            // horizontally; a single day fits any tablet width.
+            days > 1 ? "min-w-[640px]" : "min-w-[280px]",
+          )}
+        >
           <div
             className="grid shrink-0 border-b"
             style={{ gridTemplateColumns: gridCols }}

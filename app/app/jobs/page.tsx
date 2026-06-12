@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/jobs";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import { buildSearchIndex } from "@/lib/db/search";
+import { dateInTimezone, dayRangeUtc } from "@/lib/utils/date";
 
 export const metadata = {
   title: "Jobs",
@@ -53,26 +54,31 @@ export default async function JobsPage({
     buildSearchIndex("jobs"),
   ]);
 
+  const { startUtc: todayStartUtc } = dayRangeUtc(
+    timezone,
+    dateInTimezone(timezone),
+  );
+
   return (
     <SearchFilterProvider>
-    <div className="space-y-6">
-      <div className="relative flex items-center justify-between">
+    {/* On md+ the page pins to the viewport and only the table scrolls, so
+        the title/search/filter header stays visible while browsing jobs. */}
+    <div className="flex flex-col gap-6 md:h-full md:min-h-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
         <div>
           <h1 className="text-2xl font-semibold">Jobs</h1>
           <p className="text-sm text-muted-foreground">
             Every booking and its current status.
           </p>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-          <div className="pointer-events-auto w-full max-w-sm">
-            <SearchBar
-              scope="jobs"
-              mode="filter"
-              placeholder="Search by customer, plate, or notes…"
-            />
-          </div>
+        <div className="order-last w-full lg:order-none">
+          <SearchBar
+            scope="jobs"
+            mode="filter"
+            placeholder="Search by customer, plate, or notes…"
+          />
         </div>
-        <Button asChild>
+        <Button asChild className="lg:justify-self-end">
           <Link href="/app/jobs/new">
             <Plus className="mr-2 h-4 w-4" />
             New job
@@ -92,8 +98,8 @@ export default async function JobsPage({
                 })}
                 className={
                   active
-                    ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
-                    : "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    ? "rounded-sm bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-foreground"
+                    : "rounded-sm px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
                 }
               >
                 {f.label}
@@ -155,7 +161,13 @@ export default async function JobsPage({
           </p>
         </div>
       ) : (
-        <JobsTable jobs={jobs} index={index} />
+        <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
+          <JobsTable
+            jobs={jobs}
+            index={index}
+            todayStartUtc={todayStartUtc}
+          />
+        </div>
       )}
     </div>
     </SearchFilterProvider>

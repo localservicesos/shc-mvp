@@ -114,7 +114,7 @@ export default async function InvoiceDetailPage({
         </div>
       </div>
 
-      <article className="rounded-lg border bg-card p-8 shadow-xs print:border-0 print:shadow-none">
+      <article className="rounded-lg border bg-card p-4 shadow-xs sm:p-8 print:border-0 print:shadow-none">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-6">
           <div>
             {/* eslint-disable-next-line @next/next/no-img-element */}

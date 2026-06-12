@@ -67,7 +67,9 @@ export function InvoicesTable({
                     {inv.invoice_number}
                   </Link>
                 </TableCell>
-                <TableCell>{inv.job?.customer?.name ?? "—"}</TableCell>
+                <TableCell className="whitespace-normal">
+                  {inv.job?.customer?.name ?? "—"}
+                </TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">
                   {formatDate(inv.created_at)}
                 </TableCell>
