@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { JobsTable } from "@/components/jobs/jobs-table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import {
+  JOBS_PAGE_SIZE,
   JOB_STATUSES,
   JOB_STATUS_LABELS,
-  listJobs,
+  listJobsPaged,
   type JobStatus,
 } from "@/lib/db/jobs";
 import { getCurrentBusiness } from "@/lib/db/current-business";
@@ -44,12 +46,13 @@ export default async function JobsPage({
   const status = (params.status as JobStatus | "all" | undefined) ?? "all";
   const from = params.from;
   const to = params.to;
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const business = await getCurrentBusiness();
   const timezone = business?.timezone ?? "Australia/Brisbane";
 
-  const [jobs, index] = await Promise.all([
-    listJobs({ status, from, to, timezone }),
+  const [{ rows: jobs, total }, index] = await Promise.all([
+    listJobsPaged({ status, from, to, timezone }, page),
     buildSearchIndex("jobs"),
   ]);
 
@@ -89,6 +92,7 @@ export default async function JobsPage({
                 key={f.value}
                 href={buildHref(params, {
                   status: f.value === "all" ? undefined : f.value,
+                  page: undefined, // changing the filter restarts at page 1
                 })}
                 className={
                   active
@@ -133,7 +137,13 @@ export default async function JobsPage({
           </Button>
           {from || to ? (
             <Button asChild variant="ghost" size="sm">
-              <Link href={buildHref(params, { from: undefined, to: undefined })}>
+              <Link
+                href={buildHref(params, {
+                  from: undefined,
+                  to: undefined,
+                  page: undefined,
+                })}
+              >
                 Clear dates
               </Link>
             </Button>
@@ -155,7 +165,17 @@ export default async function JobsPage({
           </p>
         </div>
       ) : (
-        <JobsTable jobs={jobs} index={index} />
+        <>
+          <JobsTable jobs={jobs} index={index} />
+          <PaginationControls
+            page={page}
+            pageSize={JOBS_PAGE_SIZE}
+            total={total}
+            makeHref={(p) =>
+              buildHref(params, { page: p > 1 ? String(p) : undefined })
+            }
+          />
+        </>
       )}
     </div>
     </SearchFilterProvider>

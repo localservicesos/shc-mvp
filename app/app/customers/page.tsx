@@ -4,16 +4,24 @@ import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { CustomersTable } from "@/components/customers/customers-table";
-import { listCustomers } from "@/lib/db/customers";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { CUSTOMERS_PAGE_SIZE, listCustomersPaged } from "@/lib/db/customers";
 import { buildSearchIndex } from "@/lib/db/search";
 
 export const metadata = {
   title: "Customers",
 };
 
-export default async function CustomersPage() {
-  const [customers, index] = await Promise.all([
-    listCustomers(),
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+
+  const [{ rows: customers, total }, index] = await Promise.all([
+    listCustomersPaged(page),
     buildSearchIndex("customers"),
   ]);
 
@@ -58,7 +66,17 @@ export default async function CustomersPage() {
             </p>
           </div>
         ) : (
-          <CustomersTable customers={customers} index={index} />
+          <>
+            <CustomersTable customers={customers} index={index} />
+            <PaginationControls
+              page={page}
+              pageSize={CUSTOMERS_PAGE_SIZE}
+              total={total}
+              makeHref={(p) =>
+                p > 1 ? `/app/customers?page=${p}` : "/app/customers"
+              }
+            />
+          </>
         )}
       </div>
     </SearchFilterProvider>

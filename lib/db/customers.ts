@@ -47,6 +47,29 @@ export async function listCustomers(): Promise<Customer[]> {
   return (data ?? []).map(normalizeCustomer);
 }
 
+export const CUSTOMERS_PAGE_SIZE = 50;
+
+/**
+ * Page through customers instead of fetching the whole table. `total` is the
+ * full row count so the UI can render page controls. The unpaged
+ * `listCustomers` stays for pickers (e.g. the job form) that need every name.
+ */
+export async function listCustomersPaged(
+  page = 1,
+  pageSize = CUSTOMERS_PAGE_SIZE,
+): Promise<{ rows: Customer[]; total: number }> {
+  const first = (Math.max(1, page) - 1) * pageSize;
+  const supabase = await createClient();
+  const { data, error, count } = await supabase
+    .from("customers")
+    .select("*", { count: "exact" })
+    .order("name", { ascending: true })
+    .range(first, first + pageSize - 1);
+
+  if (error) throw error;
+  return { rows: (data ?? []).map(normalizeCustomer), total: count ?? 0 };
+}
+
 export async function getCustomer(id: string): Promise<Customer | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

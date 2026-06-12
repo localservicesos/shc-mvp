@@ -2,16 +2,24 @@ import Link from "next/link";
 import { SearchBar } from "@/components/search/search-bar";
 import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { InvoicesTable } from "@/components/invoices/invoices-table";
-import { listInvoices } from "@/lib/db/invoices";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { INVOICES_PAGE_SIZE, listInvoicesPaged } from "@/lib/db/invoices";
 import { buildSearchIndex } from "@/lib/db/search";
 
 export const metadata = {
   title: "Invoices",
 };
 
-export default async function InvoicesPage() {
-  const [invoices, index] = await Promise.all([
-    listInvoices(),
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+
+  const [{ rows: invoices, total }, index] = await Promise.all([
+    listInvoicesPaged(page),
     buildSearchIndex("invoices"),
   ]);
 
@@ -52,7 +60,17 @@ export default async function InvoicesPage() {
             </p>
           </div>
         ) : (
-          <InvoicesTable invoices={invoices} index={index} />
+          <>
+            <InvoicesTable invoices={invoices} index={index} />
+            <PaginationControls
+              page={page}
+              pageSize={INVOICES_PAGE_SIZE}
+              total={total}
+              makeHref={(p) =>
+                p > 1 ? `/app/invoices?page=${p}` : "/app/invoices"
+              }
+            />
+          </>
         )}
       </div>
     </SearchFilterProvider>

@@ -102,13 +102,18 @@ export type ListJobsFilters = {
   customerId?: string;
 };
 
-export async function listJobs(
-  filters: ListJobsFilters = {},
-): Promise<JobWithRelations[]> {
+export type Paged<T> = { rows: T[]; total: number };
+
+export const JOBS_PAGE_SIZE = 50;
+
+async function queryJobs(
+  filters: ListJobsFilters,
+  range?: { from: number; to: number },
+): Promise<Paged<JobWithRelations>> {
   const supabase = await createClient();
   let query = supabase
     .from("jobs")
-    .select(RELATIONS)
+    .select(RELATIONS, { count: "exact" })
     .order("scheduled_start", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
@@ -128,10 +133,35 @@ export async function listJobs(
   if (filters.customerId) {
     query = query.eq("customer_id", filters.customerId);
   }
+  if (range) {
+    query = query.range(range.from, range.to);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
+}
+
+export async function listJobs(
+  filters: ListJobsFilters = {},
+): Promise<JobWithRelations[]> {
+  return (await queryJobs(filters)).rows;
+}
+
+/**
+ * Page through jobs instead of fetching the whole table. `total` counts every
+ * row matching the filters, so the UI can render page controls.
+ */
+export async function listJobsPaged(
+  filters: ListJobsFilters = {},
+  page = 1,
+  pageSize = JOBS_PAGE_SIZE,
+): Promise<Paged<JobWithRelations>> {
+  const first = (Math.max(1, page) - 1) * pageSize;
+  return queryJobs(filters, { from: first, to: first + pageSize - 1 });
 }
 
 export async function getJob(id: string): Promise<JobWithRelations | null> {

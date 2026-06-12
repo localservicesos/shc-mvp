@@ -68,6 +68,31 @@ export async function listInvoices(): Promise<InvoiceWithRelations[]> {
   return ((data ?? []) as unknown as InvoiceWithRelations[]).map(normalizeInvoice);
 }
 
+export const INVOICES_PAGE_SIZE = 50;
+
+/**
+ * Page through invoices instead of fetching the whole table. `total` is the
+ * full row count so the UI can render page controls.
+ */
+export async function listInvoicesPaged(
+  page = 1,
+  pageSize = INVOICES_PAGE_SIZE,
+): Promise<{ rows: InvoiceWithRelations[]; total: number }> {
+  const first = (Math.max(1, page) - 1) * pageSize;
+  const supabase = await createClient();
+  const { data, error, count } = await supabase
+    .from("invoices")
+    .select(RELATIONS, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(first, first + pageSize - 1);
+
+  if (error) throw error;
+  return {
+    rows: ((data ?? []) as unknown as InvoiceWithRelations[]).map(normalizeInvoice),
+    total: count ?? 0,
+  };
+}
+
 export async function getInvoice(
   id: string,
 ): Promise<InvoiceWithRelations | null> {
