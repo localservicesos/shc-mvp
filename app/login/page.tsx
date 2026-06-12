@@ -18,7 +18,7 @@ export default async function LoginPage() {
 
   return (
     <main className="relative flex min-h-svh items-center justify-center bg-[url('/bg-studio.webp')] bg-cover bg-center px-4">
-      <div className="pointer-events-none absolute inset-0 bg-black/95" />
+      <div className="pointer-events-none absolute inset-0 bg-black/90" />
       <div className="absolute top-[15%] left-1/2 -translate-x-1/2 rounded-lg p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
