@@ -28,13 +28,14 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const customer = await getCustomer(id);
-  if (!customer) notFound();
-
-  const [vehicles, jobs] = await Promise.all([
-    listVehiclesForCustomer(customer.id),
-    listJobsForCustomer(customer.id),
+  // All three queries key off the route id alone, so they can share one
+  // round-trip window instead of waiting for the customer row first.
+  const [customer, vehicles, jobs] = await Promise.all([
+    getCustomer(id),
+    listVehiclesForCustomer(id),
+    listJobsForCustomer(id),
   ]);
+  if (!customer) notFound();
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

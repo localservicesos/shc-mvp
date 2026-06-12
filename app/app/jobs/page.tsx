@@ -2,17 +2,17 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search/search-bar";
-import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { JobsTable } from "@/components/jobs/jobs-table";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { loadSearchIndexAction } from "@/app/app/search-actions";
 import {
+  JOBS_PAGE_SIZE,
   JOB_STATUSES,
   JOB_STATUS_LABELS,
-  listJobs,
+  listJobsPaged,
   type JobStatus,
 } from "@/lib/db/jobs";
 import { getCurrentBusiness } from "@/lib/db/current-business";
-import { buildSearchIndex } from "@/lib/db/search";
-import { dateInTimezone, dayRangeUtc } from "@/lib/utils/date";
 
 export const metadata = {
   title: "Jobs",
@@ -45,14 +45,15 @@ export default async function JobsPage({
   const status = (params.status as JobStatus | "all" | undefined) ?? "all";
   const from = params.from;
   const to = params.to;
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const business = await getCurrentBusiness();
   const timezone = business?.timezone ?? "Australia/Brisbane";
 
-  const [jobs, index] = await Promise.all([
-    listJobs({ status, from, to, timezone }),
-    buildSearchIndex("jobs"),
-  ]);
+  const { rows: jobs, total } = await listJobsPaged(
+    { status, from, to, timezone },
+    page,
+  );
 
   const { startUtc: todayStartUtc } = dayRangeUtc(
     timezone,
@@ -60,23 +61,22 @@ export default async function JobsPage({
   );
 
   return (
-    <SearchFilterProvider>
-    {/* On md+ the page pins to the viewport and only the table scrolls, so
-        the title/search/filter header stays visible while browsing jobs. */}
-    <div className="flex flex-col gap-6 md:h-full md:min-h-0">
-      <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
+    <div className="space-y-6">
+      <div className="relative flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Jobs</h1>
           <p className="text-sm text-muted-foreground">
             Every booking and its current status.
           </p>
         </div>
-        <div className="order-last w-full lg:order-none">
-          <SearchBar
-            scope="jobs"
-            mode="filter"
-            placeholder="Search by customer, plate, or notes…"
-          />
+        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+          <div className="pointer-events-auto w-full max-w-sm">
+            <SearchBar
+              scope="jobs"
+              loadIndex={loadSearchIndexAction}
+              placeholder="Search by customer, plate, or notes…"
+            />
+          </div>
         </div>
         <Button asChild className="lg:justify-self-end">
           <Link href="/app/jobs/new">
@@ -95,6 +95,7 @@ export default async function JobsPage({
                 key={f.value}
                 href={buildHref(params, {
                   status: f.value === "all" ? undefined : f.value,
+                  page: undefined, // changing the filter restarts at page 1
                 })}
                 className={
                   active
@@ -139,7 +140,13 @@ export default async function JobsPage({
           </Button>
           {from || to ? (
             <Button asChild variant="ghost" size="sm">
-              <Link href={buildHref(params, { from: undefined, to: undefined })}>
+              <Link
+                href={buildHref(params, {
+                  from: undefined,
+                  to: undefined,
+                  page: undefined,
+                })}
+              >
                 Clear dates
               </Link>
             </Button>
@@ -161,15 +168,18 @@ export default async function JobsPage({
           </p>
         </div>
       ) : (
-        <div className="md:min-h-0 md:flex-1 md:overflow-y-auto">
-          <JobsTable
-            jobs={jobs}
-            index={index}
-            todayStartUtc={todayStartUtc}
+        <>
+          <JobsTable jobs={jobs} />
+          <PaginationControls
+            page={page}
+            pageSize={JOBS_PAGE_SIZE}
+            total={total}
+            makeHref={(p) =>
+              buildHref(params, { page: p > 1 ? String(p) : undefined })
+            }
           />
-        </div>
+        </>
       )}
     </div>
-    </SearchFilterProvider>
   );
 }

@@ -10,6 +10,7 @@ import { getCurrentBusiness } from "@/lib/db/current-business";
 import {
   listJobsBetween,
   listJobsByStatus,
+  sumJobPrices,
   type JobWithRelations,
 } from "@/lib/db/jobs";
 import {
@@ -26,6 +27,10 @@ import { formatMoney } from "@/lib/utils/format";
 export const metadata = {
   title: "Dashboard",
 };
+
+// Each bucket card shows at most this many rows; the headline number still
+// reflects the full count and "View list →" links to the filtered Jobs page.
+const BUCKET_LIMIT = 15;
 
 export default async function DashboardPage() {
   const business = await getCurrentBusiness();
@@ -45,18 +50,21 @@ export default async function DashboardPage() {
   const tomorrow = shiftDateString(today, 1);
   const { startUtc: tomorrowStartUtc } = dayRangeUtc(tz, tomorrow);
 
-  const [todayJobs, booked, completedRecently, completedThisMonth] =
+  const [todayJobs, booked, completedRecently, monthCompleted] =
     await Promise.all([
-      listJobsBetween(todayStart, todayEnd),
-      listJobsByStatus("booked", { fromUtc: tomorrowStartUtc }),
-      listJobsBetween(weekStartUtc, weekEndUtc, { status: "completed" }),
-      listJobsBetween(monthStartUtc, monthEndUtc, { status: "completed" }),
+      listJobsBetween(todayStart, todayEnd, { limit: BUCKET_LIMIT }),
+      listJobsByStatus("booked", {
+        fromUtc: tomorrowStartUtc,
+        limit: BUCKET_LIMIT,
+      }),
+      listJobsBetween(weekStartUtc, weekEndUtc, {
+        status: "completed",
+        limit: BUCKET_LIMIT,
+      }),
+      sumJobPrices(monthStartUtc, monthEndUtc, "completed"),
     ]);
 
-  const monthIncome = completedThisMonth.reduce(
-    (sum, job) => sum + (job.price ?? 0),
-    0,
-  );
+  const monthIncome = monthCompleted.total;
   const monthLabel = new Intl.DateTimeFormat("en-AU", {
     month: "long",
     timeZone: tz,
@@ -110,10 +118,8 @@ export default async function DashboardPage() {
             {formatMoney(monthIncome, business?.currency ?? "AUD")}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {completedThisMonth.length}{" "}
-            {completedThisMonth.length === 1
-              ? "completed job"
-              : "completed jobs"}{" "}
+            {monthCompleted.count}{" "}
+            {monthCompleted.count === 1 ? "completed job" : "completed jobs"}{" "}
             this month
           </p>
         </CardContent>
@@ -125,7 +131,8 @@ export default async function DashboardPage() {
         <BucketCard
           title="Today"
           icon={<CalendarClock className="h-4 w-4" />}
-          jobs={todayJobs}
+          jobs={todayJobs.rows}
+          total={todayJobs.total}
           emptyText="Nothing on the calendar today."
           dateMode="time"
           viewAllHref={`/app/jobs?from=${today}&to=${today}`}
@@ -133,14 +140,16 @@ export default async function DashboardPage() {
         <BucketCard
           title="Upcoming"
           icon={<CalendarClock className="h-4 w-4" />}
-          jobs={booked}
+          jobs={booked.rows}
+          total={booked.total}
           emptyText="No upcoming bookings."
           viewAllHref={`/app/jobs?status=booked&from=${tomorrow}`}
         />
         <BucketCard
           title="Completed last 7 days"
           icon={<CheckCircle2 className="h-4 w-4" />}
-          jobs={completedRecently}
+          jobs={completedRecently.rows}
+          total={completedRecently.total}
           emptyText="No completions in the last 7 days."
           viewAllHref={`/app/jobs?status=completed&from=${weekStart}&to=${today}`}
           className="md:col-span-2 lg:col-span-1"
@@ -154,6 +163,7 @@ function BucketCard({
   title,
   icon,
   jobs,
+  total,
   emptyText,
   viewAllHref,
   dateMode = "scheduled",
@@ -162,6 +172,8 @@ function BucketCard({
   title: string;
   icon: React.ReactNode;
   jobs: JobWithRelations[];
+  /** Full match count — may exceed jobs.length when the bucket is capped. */
+  total: number;
   emptyText: string;
   viewAllHref: string;
   dateMode?: "time" | "scheduled";
@@ -177,7 +189,7 @@ function BucketCard({
           {title}
         </CardTitle>
         <span className="text-2xl font-semibold tabular-nums">
-          {jobs.length}
+          {total}
         </span>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
@@ -229,12 +241,12 @@ function BucketCard({
           </ul>
         )}
 
-        {jobs.length > 0 ? (
+        {total > 0 ? (
           <Link
             href={viewAllHref}
             className="block shrink-0 pt-1 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
-            View list →
+            {total > jobs.length ? `View all ${total} →` : "View list →"}
           </Link>
         ) : null}
       </CardContent>

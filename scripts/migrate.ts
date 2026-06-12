@@ -3,7 +3,7 @@
  *
  * Usage:
  *   bun run migrate:status   — show which migrations are applied / pending
- *   bun run migrate:run      — apply all pending migrations in order
+ *   bun run migrate:run      — backup DB, then apply all pending migrations
  *
  * Requires DATABASE_URL in .env.local:
  *   Supabase Dashboard → Settings → Database → Connection string (URI)
@@ -11,7 +11,9 @@
  */
 
 import { readdir, readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import postgres from "postgres";
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -23,7 +25,7 @@ function getDbUrl(): string {
   // Load .env.local manually (bun does not auto-load it for scripts)
   const envPath = join(import.meta.dir, "../.env.local");
   try {
-    const text = require("node:fs").readFileSync(envPath, "utf-8");
+      const text = readFileSync(envPath, "utf-8");
     for (const line of text.split("\n")) {
       const trimmed = line.trim();
       if (trimmed.startsWith("DATABASE_URL=")) {
@@ -69,6 +71,25 @@ async function getAppliedMigrations(sql: postgres.Sql): Promise<Set<string>> {
     select name from ${sql(MIGRATIONS_TABLE)} order by name
   `;
   return new Set(rows.map((r) => r.name));
+}
+
+function createPreMigrationBackup(): void {
+  console.log("\n  Creating pre-migration database backup...\n");
+
+  const result = spawnSync(process.execPath, [join(import.meta.dir, "backup-db.ts"), "create"], {
+    encoding: "utf-8",
+    stdio: "inherit",
+  });
+
+  if (result.error) {
+    console.error(`\n  Backup failed: ${result.error.message}\n`);
+    process.exit(1);
+  }
+
+  if (result.status !== 0) {
+    console.error("\n  Backup failed. Migration stopped before applying changes.\n");
+    process.exit(result.status ?? 1);
+  }
 }
 
 // ── Commands ──────────────────────────────────────────────────────────────────
@@ -117,6 +138,8 @@ async function run(): Promise<void> {
       console.log("\n  ✨ Nothing to apply — all migrations are up to date.\n");
       return;
     }
+
+    createPreMigrationBackup();
 
     console.log(`\n  Applying ${pending.length} pending migration(s)...\n`);
 

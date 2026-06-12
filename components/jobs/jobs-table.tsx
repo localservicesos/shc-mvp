@@ -1,6 +1,3 @@
-"use client";
-
-import * as React from "react";
 import Link from "next/link";
 import {
   Table,
@@ -11,37 +8,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
-import { useFilteredIds } from "@/components/search/search-filter-context";
-import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
-import {
-  jobTotal,
-  type JobStatus,
-  type JobWithRelations,
-} from "@/types/jobs";
-import type { SearchIndexItem } from "@/types/search";
+import { jobTotal, type JobWithRelations } from "@/types/jobs";
 
-// Subtle per-status row tint so the status reads at a glance even where
-// the badge column is tight.
-const ROW_TINT: Record<JobStatus, string> = {
-  booked: "bg-blue-500/5",
-  completed: "bg-emerald-500/5",
-  cancelled: "bg-rose-500/5",
-};
-
-export function JobsTable({
-  jobs,
-  index,
-  todayStartUtc,
-}: {
-  jobs: JobWithRelations[];
-  index: SearchIndexItem[];
-  /** UTC instant of the start of "today" in the business timezone. */
-  todayStartUtc?: string;
-}) {
-  const ids = useFilteredIds(index);
-  const rows = ids ? jobs.filter((j) => ids.has(j.id)) : jobs;
+// Server component on purpose: rows render to HTML once instead of being
+// shipped a second time as serialized client-component props.
+export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
+  const rows = jobs;
 
   // Rows are chronological (oldest first), so on load anchor the viewport at
   // the first job of today (or the next upcoming one) — earlier jobs stay
@@ -85,7 +59,7 @@ export function JobsTable({
                 colSpan={7}
                 className="h-24 text-center text-sm text-muted-foreground"
               >
-                No jobs match your search.
+                No jobs to show.
               </TableCell>
             </TableRow>
           ) : (

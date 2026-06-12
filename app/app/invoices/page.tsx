@@ -1,22 +1,25 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search/search-bar";
-import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { InvoicesTable } from "@/components/invoices/invoices-table";
-import { listInvoices } from "@/lib/db/invoices";
-import { buildSearchIndex } from "@/lib/db/search";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { loadSearchIndexAction } from "@/app/app/search-actions";
+import { INVOICES_PAGE_SIZE, listInvoicesPaged } from "@/lib/db/invoices";
 
 export const metadata = {
   title: "Invoices",
 };
 
-export default async function InvoicesPage() {
-  const [invoices, index] = await Promise.all([
-    listInvoices(),
-    buildSearchIndex("invoices"),
-  ]);
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+
+  const { rows: invoices, total } = await listInvoicesPaged(page);
 
   return (
-    <SearchFilterProvider>
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
           <div>
@@ -26,12 +29,14 @@ export default async function InvoicesPage() {
               &quot;Generate invoice&quot; to create one.
             </p>
           </div>
-          <div className="order-last w-full lg:order-none">
-            <SearchBar
-              scope="invoices"
-              mode="filter"
-              placeholder="Search by invoice number or customer…"
-            />
+          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+            <div className="pointer-events-auto w-full max-w-sm">
+              <SearchBar
+                scope="invoices"
+                loadIndex={loadSearchIndexAction}
+                placeholder="Search by invoice number or customer…"
+              />
+            </div>
           </div>
         </div>
 
@@ -50,9 +55,18 @@ export default async function InvoicesPage() {
             </p>
           </div>
         ) : (
-          <InvoicesTable invoices={invoices} index={index} />
+          <>
+            <InvoicesTable invoices={invoices} />
+            <PaginationControls
+              page={page}
+              pageSize={INVOICES_PAGE_SIZE}
+              total={total}
+              makeHref={(p) =>
+                p > 1 ? `/app/invoices?page=${p}` : "/app/invoices"
+              }
+            />
+          </>
         )}
       </div>
-    </SearchFilterProvider>
   );
 }

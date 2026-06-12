@@ -50,6 +50,26 @@ export async function listAllVehicles(): Promise<Vehicle[]> {
   return data ?? [];
 }
 
+export type VehicleOption = Pick<
+  Vehicle,
+  "id" | "customer_id" | "make" | "model" | "year" | "plate"
+>;
+
+/**
+ * The columns the job form's vehicle picker actually renders — skips color,
+ * notes and timestamps so the picker payload stays small as vehicles grow.
+ */
+export async function listVehicleOptions(): Promise<VehicleOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("vehicles")
+    .select("id, customer_id, make, model, year, plate")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getVehicle(id: string): Promise<Vehicle | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

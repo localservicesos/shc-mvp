@@ -1,6 +1,6 @@
 -- Initial schema for the local-service-os MVP.
 --
--- Designed for the first paying client (Raphael's car detailing) while
+-- Designed for the first client (Sunshine Hot Cars, a car detailing business) while
 -- keeping a multi-tenant SaaS shape: every operational table carries
 -- business_id and RLS scopes rows to the businesses the auth user
 -- belongs to via business_members.

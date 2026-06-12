@@ -33,13 +33,14 @@ export default async function JobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const job = await getJob(id);
-  if (!job) notFound();
-
-  const [invoice, photos] = await Promise.all([
-    getInvoiceByJob(job.id),
-    listJobPhotos(job.id),
+  // All three queries key off the route id alone, so they can share one
+  // round-trip window instead of waiting for the job row first.
+  const [job, invoice, photos] = await Promise.all([
+    getJob(id),
+    getInvoiceByJob(id),
+    listJobPhotos(id),
   ]);
+  if (!job) notFound();
 
   const uploadAction = uploadJobPhotoAction.bind(null, job.id);
   

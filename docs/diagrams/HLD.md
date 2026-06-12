@@ -3,7 +3,7 @@
 This document captures the high-level architecture of the MVP as diagrams-as-code
 (Mermaid) annotated with the software engineering patterns each piece applies.
 
-The MVP target is Raphael's car detailing business, but the foundation is
+The MVP target is Sunshine Hot Cars, a car detailing business, but the foundation is
 designed to evolve into a multi-tenant SaaS for small local service businesses.
 
 ---
@@ -12,8 +12,8 @@ designed to evolve into a multi-tenant SaaS for small local service businesses.
 
 ```mermaid
 C4Context
-    title System Context — Local Service OS (MVP for Raphael)
-    Person(owner, "Business Owner", "Raphael — runs car detailing biz")
+    title System Context — Local Service OS (MVP for Sunshine Hot Cars)
+    Person(owner, "Business Owner", "Runs a car detailing business")
     Person(staff, "Staff (future)", "Detailers updating job status")
     System(app, "Local Service OS", "Next.js web app: customers, jobs, schedule, invoices, photos")
     System_Ext(supabase, "Supabase", "Postgres + Auth + Storage")

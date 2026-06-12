@@ -64,8 +64,13 @@ async function assertNoVehicleConflict(
     .select("id, scheduled_start, scheduled_end")
     .eq("vehicle_id", vehicleId)
     .eq("status", "booked")
-    .not("scheduled_start", "is", null);
+    .not("scheduled_start", "is", null)
+    // SQL pre-filter: a booking that ended before ours starts can't conflict,
+    // and (when we have an end) one starting after ours ends can't either.
+    // Conservative superset — intervalsOverlap below stays the authority.
+    .or(`scheduled_end.gte.${start},scheduled_end.is.null`);
 
+  if (end) query = query.lt("scheduled_start", end);
   if (excludeJobId) query = query.neq("id", excludeJobId);
 
   const { data, error } = await query;
@@ -102,13 +107,18 @@ export type ListJobsFilters = {
   customerId?: string;
 };
 
-export async function listJobs(
-  filters: ListJobsFilters = {},
-): Promise<JobWithRelations[]> {
+export type Paged<T> = { rows: T[]; total: number };
+
+export const JOBS_PAGE_SIZE = 50;
+
+async function queryJobs(
+  filters: ListJobsFilters,
+  range?: { from: number; to: number },
+): Promise<Paged<JobWithRelations>> {
   const supabase = await createClient();
   let query = supabase
     .from("jobs")
-    .select(RELATIONS)
+    .select(RELATIONS, { count: "exact" })
     .order("scheduled_start", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
 
@@ -128,10 +138,35 @@ export async function listJobs(
   if (filters.customerId) {
     query = query.eq("customer_id", filters.customerId);
   }
+  if (range) {
+    query = query.range(range.from, range.to);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
+}
+
+export async function listJobs(
+  filters: ListJobsFilters = {},
+): Promise<JobWithRelations[]> {
+  return (await queryJobs(filters)).rows;
+}
+
+/**
+ * Page through jobs instead of fetching the whole table. `total` counts every
+ * row matching the filters, so the UI can render page controls.
+ */
+export async function listJobsPaged(
+  filters: ListJobsFilters = {},
+  page = 1,
+  pageSize = JOBS_PAGE_SIZE,
+): Promise<Paged<JobWithRelations>> {
+  const first = (Math.max(1, page) - 1) * pageSize;
+  return queryJobs(filters, { from: first, to: first + pageSize - 1 });
 }
 
 export async function getJob(id: string): Promise<JobWithRelations | null> {
@@ -215,7 +250,12 @@ export async function updateJob(
     input.scheduled_end !== undefined ||
     input.status !== undefined;
 
-  if (touchesSchedule) {
+  // Moving to a non-booked status (completed/cancelled) releases the slot —
+  // no conflict is possible, so skip the current-row lookup entirely. This is
+  // the most common update (marking a job done) and now costs one round trip.
+  const leavesBooked = input.status !== undefined && input.status !== "booked";
+
+  if (touchesSchedule && !leavesBooked) {
     const { data: current } = await supabase
       .from("jobs")
       .select("vehicle_id, scheduled_start, scheduled_end, status")
@@ -252,21 +292,33 @@ export async function updateJob(
 export async function deleteJob(id: string): Promise<void> {
   const supabase = await createClient();
 
-  const { data: job } = await supabase
+  // Guard and delete in one statement: only non-completed jobs match. The
+  // returned rows tell us whether anything was deleted, so the happy path is
+  // a single round trip instead of select-then-delete.
+  const { data, error } = await supabase
     .from("jobs")
-    .select("status")
+    .delete()
     .eq("id", id)
-    .maybeSingle();
+    .neq("status", "completed")
+    .select("id");
 
-  if (job?.status === "completed") {
-    throw new Error("Completed jobs can't be deleted.");
-  }
-
-  const { error } = await supabase.from("jobs").delete().eq("id", id);
   if (error?.code === "23503") {
     throw new Error("Delete this job's invoice first.");
   }
   if (error) throw error;
+
+  if ((data ?? []).length === 0) {
+    // Nothing deleted — either the job is completed (blocked) or already gone.
+    const { data: job } = await supabase
+      .from("jobs")
+      .select("status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (job?.status === "completed") {
+      throw new Error("Completed jobs can't be deleted.");
+    }
+  }
 }
 
 export async function listJobsForCustomer(
@@ -277,17 +329,18 @@ export async function listJobsForCustomer(
 
 /**
  * Jobs whose scheduled_start falls in the given UTC range. Used by the
- * Dashboard (today bucket) and the Schedule view.
+ * Dashboard buckets. `limit` caps the rows fetched while `total` still counts
+ * every match, so the UI can show "15 of 230" without transferring 230 rows.
  */
 export async function listJobsBetween(
   startUtc: string,
   endUtc: string,
-  options: { status?: JobStatus | "all" } = {},
-): Promise<JobWithRelations[]> {
+  options: { status?: JobStatus | "all"; limit?: number } = {},
+): Promise<Paged<JobWithRelations>> {
   const supabase = await createClient();
   let query = supabase
     .from("jobs")
-    .select(RELATIONS)
+    .select(RELATIONS, { count: "exact" })
     .gte("scheduled_start", startUtc)
     .lt("scheduled_start", endUtc)
     .order("scheduled_start", { ascending: true });
@@ -295,10 +348,16 @@ export async function listJobsBetween(
   if (options.status && options.status !== "all") {
     query = query.eq("status", options.status);
   }
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
 }
 
 /**
@@ -332,23 +391,58 @@ export async function listJobsOverlapping(
   return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
 }
 
-/** Jobs with the given status, optionally restricted to scheduled_start >= some UTC instant. */
+/**
+ * Jobs with the given status, optionally restricted to scheduled_start >= some
+ * UTC instant. `limit` caps the rows fetched; `total` counts every match.
+ */
 export async function listJobsByStatus(
   status: JobStatus,
-  options: { fromUtc?: string } = {},
-): Promise<JobWithRelations[]> {
+  options: { fromUtc?: string; limit?: number } = {},
+): Promise<Paged<JobWithRelations>> {
   const supabase = await createClient();
   let query = supabase
     .from("jobs")
-    .select(RELATIONS)
+    .select(RELATIONS, { count: "exact" })
     .eq("status", status)
     .order("scheduled_start", { ascending: true, nullsFirst: false });
 
   if (options.fromUtc) {
     query = query.gte("scheduled_start", options.fromUtc);
   }
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
+}
+
+/**
+ * Sum of `price` over jobs with the given status in [startUtc, endUtc).
+ * Fetches only the price column — no relations — so the dashboard income
+ * card doesn't pay for a full job payload it never renders. (A true SQL
+ * SUM() needs PostgREST aggregates enabled or an RPC; this stays portable.)
+ */
+export async function sumJobPrices(
+  startUtc: string,
+  endUtc: string,
+  status: JobStatus,
+): Promise<{ total: number; count: number }> {
+  const supabase = await createClient();
+  const { data, error, count } = await supabase
+    .from("jobs")
+    .select("price", { count: "exact" })
+    .eq("status", status)
+    .gte("scheduled_start", startUtc)
+    .lt("scheduled_start", endUtc);
+
+  if (error) throw error;
+  return {
+    total: (data ?? []).reduce((sum, j) => sum + (j.price ?? 0), 0),
+    count: count ?? 0,
+  };
 }

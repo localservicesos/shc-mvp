@@ -7,7 +7,7 @@
  *   2. delete that business (cascade) + user after the suite.
  *
  * The browser tests themselves never see the service-role key; they log in
- * as the test user and are fully constrained by RLS, exactly like Raphael.
+ * as the test user and are fully constrained by RLS, exactly like a real business owner.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";

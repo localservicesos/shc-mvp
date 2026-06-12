@@ -1,7 +1,15 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export async function createClient() {
+/**
+ * Wrapped in React `cache()` so the many createClient() calls within one
+ * request (layout, page, every lib/db function) share a single client and a
+ * single cookies() read instead of rebuilding it each time. Outside a React
+ * render (route handlers, server actions) cache() is a transparent
+ * pass-through, so behavior there is unchanged.
+ */
+export const createClient = cache(async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
@@ -25,4 +33,4 @@ export async function createClient() {
       },
     },
   );
-}
+});
