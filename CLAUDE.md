@@ -56,10 +56,9 @@ UI components:
 - Place generated components under `components/ui/` per the project structure.
 - Prefer composing shadcn primitives over hand-rolling base components; keep custom styling minimal and Tailwind-based.
 
-Workflow — commit per step:
-- Every implementation step from this CLAUDE.md (scaffold, folder structure, Supabase utils, migrations, docs, auth, each CRUD module, dashboard, schedule, invoices, photos, etc.) must be its own git commit.
-- Use conventional commit messages (feat, fix, chore, refactor, docs, etc.) with the subject line under 72 chars.
-- Do not bundle multiple steps into one commit. Do not skip committing a step before moving to the next.
+Workflow — commits:
+- Do NOT commit automatically. Only create a git commit when I explicitly ask for it.
+- When I do ask for a commit, use conventional commit messages (feat, fix, chore, refactor, docs, etc.) with the subject line under 72 chars.
 - Never include a `Co-Authored-By` trailer.
 
 Next.js version notes:
