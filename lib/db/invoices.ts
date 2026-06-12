@@ -128,31 +128,18 @@ export async function getInvoiceByJob(
 /**
  * Generate the next invoice number for a business. Format: INV-0001.
  *
- * Derives the next number from the highest *numeric* invoice number in use —
- * not the most recently created one. Ordering by created_at was unsafe:
- * after an invoice is deleted and regenerated, the newest row can carry a
- * lower number than an existing one, producing a duplicate that violates the
- * `unique (business_id, invoice_number)` constraint.
- *
- * Still not concurrency-proof on its own (two callers can read the same max);
- * `createInvoiceForJob` retries on the resulting 23505. Promote to a Postgres
- * sequence / SECURITY DEFINER function when multi-user load is real.
+ * Delegates to the `next_invoice_number` Postgres function (migration 0012),
+ * which computes the highest numeric invoice number in SQL under an advisory
+ * lock — one round trip, concurrency-safe, and no invoice rows transferred.
  */
 async function nextInvoiceNumber(businessId: string): Promise<string> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("invoices")
-    .select("invoice_number")
-    .eq("business_id", businessId);
+  const { data, error } = await supabase.rpc("next_invoice_number", {
+    p_business_id: businessId,
+  });
 
   if (error) throw error;
-
-  let max = 0;
-  for (const row of data ?? []) {
-    const match = /(\d+)/.exec(row.invoice_number ?? "");
-    if (match) max = Math.max(max, Number.parseInt(match[1], 10));
-  }
-  return `INV-${String(max + 1).padStart(4, "0")}`;
+  return data as string;
 }
 
 export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
@@ -161,17 +148,20 @@ export async function createInvoiceForJob(jobId: string): Promise<Invoice> {
 
   const supabase = await createClient();
 
-  // Fast-path: return existing invoice if already created.
-  const existing = await getInvoiceByJob(jobId);
+  // The existing-invoice fast-path check and the job snapshot don't depend on
+  // each other — run them in parallel.
+  const [existing, jobResult] = await Promise.all([
+    getInvoiceByJob(jobId),
+    supabase
+      .from("jobs")
+      .select("price, discount, extra")
+      .eq("id", jobId)
+      .single(),
+  ]);
   if (existing) return existing;
 
-  // Snapshot the job's current price and adjustments.
-  const { data: job, error: jobError } = await supabase
-    .from("jobs")
-    .select("price, discount, extra")
-    .eq("id", jobId)
-    .single();
-  if (jobError) throw jobError;
+  if (jobResult.error) throw jobResult.error;
+  const job = jobResult.data;
 
   // Calculate GST (10% inclusive — Australian standard).
   // amount is the grand total; subtotal is amount / 1.1; gst is the remainder.
