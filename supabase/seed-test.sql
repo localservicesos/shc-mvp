@@ -3,8 +3,8 @@
 -- WHAT THIS CREATES:
 --   - 200 customers
 --   - 1–3 vehicles per customer (~400 vehicles total)
---   - 3–7 jobs per customer across all statuses (~1,000 jobs total)
---   - Invoices for every completed/ready job (~600 invoices)
+--   - 3–7 jobs per customer, statuses: booked / completed / cancelled (~1,000 jobs total)
+--   - Invoices for every completed job (~600 invoices)
 --
 -- HOW TO RUN:
 --   1. Go to Supabase dashboard → SQL Editor
@@ -109,7 +109,7 @@ declare
     'Caboolture QLD 4510','North Lakes QLD 4509','Mango Hill QLD 4509'
   ];
 
-  statuses      job_status[] := array['booked','in_progress','ready','completed','completed','completed','cancelled']::job_status[];
+  statuses      job_status[] := array['booked','completed','completed','completed','cancelled']::job_status[];
   plate_letters text[]       := array['A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','S','T','U','V','W','X','Y','Z'];
 
   v_inv_suffix  text;
@@ -242,8 +242,8 @@ begin
       )
       returning id into v_job_id;
 
-      -- create invoice for completed and ready jobs
-      if v_status in ('completed', 'ready') then
+      -- create invoice for completed jobs
+      if v_status = 'completed' then
         v_inv_suffix := lpad(v_inv_num::text, 5, '0');
         declare
           v_total    numeric(10,2) := v_price - v_discount + v_extra;
@@ -259,17 +259,14 @@ begin
             v_biz_id, v_job_id, 'MOCK-' || v_inv_suffix,
             v_subtotal, v_gst, v_total,
             case
-              when v_status = 'ready'                    then 'sent'
-              when mod(v_inv_num, 5) = 0                 then 'draft'
-              when mod(v_inv_num, 3) = 0                 then 'sent'
-              else                                            'paid'
+              when mod(v_inv_num, 5) = 0 then 'draft'
+              when mod(v_inv_num, 3) = 0 then 'sent'
+              else                            'paid'
             end,
-            case when v_status = 'completed' then v_end + interval '1 hour' else null end,
-            case
-              when v_status = 'completed' and mod(v_inv_num, 5) != 0 and mod(v_inv_num, 3) != 0
-              then v_end + interval '1 day'
-              else null
-            end
+            case when mod(v_inv_num, 3) != 0 and mod(v_inv_num, 5) != 0
+              then v_end + interval '1 hour' else null end,
+            case when mod(v_inv_num, 5) != 0 and mod(v_inv_num, 3) != 0
+              then v_end + interval '1 day' else null end
           );
         end;
         v_inv_num := v_inv_num + 1;
