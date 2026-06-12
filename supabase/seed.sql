@@ -13,7 +13,7 @@
 -- their own price). It does NOT touch customers, vehicles, jobs, or
 -- invoices.
 
--- 1. The first business (Sunshine Hot Cars).
+-- 1. The first business (Raphael's car detailing).
 insert into businesses (name, slug, timezone, currency)
 values ('Sunshine Hot Cars', 'sunshine-hot-cars', 'Australia/Brisbane', 'AUD')
 on conflict (slug) do nothing;
@@ -24,7 +24,7 @@ insert into business_members (user_id, business_id, role)
 select u.id, b.id, 'owner'
 from auth.users  u
 join businesses  b on b.slug = 'sunshine-hot-cars'
-where u.email = 'localservicesops@gmail.com'  -- Local Services Ops (dev)
+where u.email = 'rafaelfelic@gmail.com'  -- OWNER_EMAIL
 on conflict (user_id, business_id) do nothing;
 
 -- 3. Service catalog matching sunshinehotcars.com/services-and-prices.
