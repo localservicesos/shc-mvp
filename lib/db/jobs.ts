@@ -64,8 +64,13 @@ async function assertNoVehicleConflict(
     .select("id, scheduled_start, scheduled_end")
     .eq("vehicle_id", vehicleId)
     .eq("status", "booked")
-    .not("scheduled_start", "is", null);
+    .not("scheduled_start", "is", null)
+    // SQL pre-filter: a booking that ended before ours starts can't conflict,
+    // and (when we have an end) one starting after ours ends can't either.
+    // Conservative superset — intervalsOverlap below stays the authority.
+    .or(`scheduled_end.gte.${start},scheduled_end.is.null`);
 
+  if (end) query = query.lt("scheduled_start", end);
   if (excludeJobId) query = query.neq("id", excludeJobId);
 
   const { data, error } = await query;
@@ -245,7 +250,12 @@ export async function updateJob(
     input.scheduled_end !== undefined ||
     input.status !== undefined;
 
-  if (touchesSchedule) {
+  // Moving to a non-booked status (completed/cancelled) releases the slot —
+  // no conflict is possible, so skip the current-row lookup entirely. This is
+  // the most common update (marking a job done) and now costs one round trip.
+  const leavesBooked = input.status !== undefined && input.status !== "booked";
+
+  if (touchesSchedule && !leavesBooked) {
     const { data: current } = await supabase
       .from("jobs")
       .select("vehicle_id, scheduled_start, scheduled_end, status")
@@ -282,21 +292,33 @@ export async function updateJob(
 export async function deleteJob(id: string): Promise<void> {
   const supabase = await createClient();
 
-  const { data: job } = await supabase
+  // Guard and delete in one statement: only non-completed jobs match. The
+  // returned rows tell us whether anything was deleted, so the happy path is
+  // a single round trip instead of select-then-delete.
+  const { data, error } = await supabase
     .from("jobs")
-    .select("status")
+    .delete()
     .eq("id", id)
-    .maybeSingle();
+    .neq("status", "completed")
+    .select("id");
 
-  if (job?.status === "completed") {
-    throw new Error("Completed jobs can't be deleted.");
-  }
-
-  const { error } = await supabase.from("jobs").delete().eq("id", id);
   if (error?.code === "23503") {
     throw new Error("Delete this job's invoice first.");
   }
   if (error) throw error;
+
+  if ((data ?? []).length === 0) {
+    // Nothing deleted — either the job is completed (blocked) or already gone.
+    const { data: job } = await supabase
+      .from("jobs")
+      .select("status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (job?.status === "completed") {
+      throw new Error("Completed jobs can't be deleted.");
+    }
+  }
 }
 
 export async function listJobsForCustomer(
