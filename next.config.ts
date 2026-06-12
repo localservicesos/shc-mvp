@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
       // multipart overhead.
       bodySizeLimit: "12mb",
     },
+    // Client Router Cache: re-visiting a dynamic page within 30s renders the
+    // cached copy instantly instead of re-querying the server. Safe here
+    // because every server action revalidates its paths after a write, which
+    // purges this cache — the 30s window only applies to untouched data.
+    staleTimes: {
+      dynamic: 30,
+    },
   },
 };
 
