@@ -113,7 +113,13 @@ function runLaunchctl(args: string[], allowFailure = false): void {
 }
 
 function serviceTarget(): string {
-  return `gui/${process.getuid()}`;
+  // process.getuid is absent on Windows; this script is macOS-only (launchd).
+  const uid = process.getuid?.();
+  if (uid === undefined) {
+    console.error("Cannot determine user id — launchd scheduling needs macOS.");
+    process.exit(1);
+  }
+  return `gui/${uid}`;
 }
 
 function install(): void {
