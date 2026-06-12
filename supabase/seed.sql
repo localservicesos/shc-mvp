@@ -13,18 +13,21 @@
 -- their own price). It does NOT touch customers, vehicles, jobs, or
 -- invoices.
 
--- 1. The first business (Raphael's car detailing).
+-- 1. The first business (Sunshine Hot Cars).
 insert into businesses (name, slug, timezone, currency)
 values ('Sunshine Hot Cars', 'sunshine-hot-cars', 'Australia/Brisbane', 'AUD')
 on conflict (slug) do nothing;
 
--- 2. Link the auth user as the business owner.
---    OWNER_EMAIL: change this to your dev auth user's email.
+-- 2. Link the business owners.
+--    Both accounts get the 'owner' role so either can log in and manage the business.
+--      localservicesops@gmail.com — main agency/admin account
+--      info@sunshinehotcars.com   — business client account
+--    Each auth user must exist in Dashboard → Authentication → Users before running this.
 insert into business_members (user_id, business_id, role)
 select u.id, b.id, 'owner'
 from auth.users  u
 join businesses  b on b.slug = 'sunshine-hot-cars'
-where u.email = 'rafaelfelic@gmail.com'  -- OWNER_EMAIL
+where u.email in ('localservicesops@gmail.com', 'info@sunshinehotcars.com')
 on conflict (user_id, business_id) do nothing;
 
 -- 3. Service catalog matching sunshinehotcars.com/services-and-prices.

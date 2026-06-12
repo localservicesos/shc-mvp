@@ -7,8 +7,8 @@
 --   - address: Business address shown on invoice
 --   - logo_url: Used in the sidebar and invoice header
 --
--- All columns are nullable so existing rows are unaffected. Raphael
--- can fill them in via a future Settings page.
+-- All columns are nullable so existing rows are unaffected.
+-- The business owner can fill them in via the Settings page.
 
 alter table businesses
   add column if not exists abn       text,

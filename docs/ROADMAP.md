@@ -1,10 +1,10 @@
 # Roadmap
 
-What we are doing now, what comes next for Raphael, and what shapes the future SaaS evolution. Anything not in the **Now** column is intentionally out of MVP scope (see `docs/MVP_SCOPE.md`).
+What we are doing now, what comes next, and what shapes the future SaaS evolution. Anything not in the **Now** column is intentionally out of MVP scope (see `docs/MVP_SCOPE.md`).
 
-## Now — MVP for Raphael
+## Now — MVP for Sunshine Hot Cars
 
-Operational web app replacing Raphael's paper notebook.
+Operational web app replacing paper notebook tracking.
 
 - [x] Auth (email + password via Supabase Auth) and `proxy.ts` session gate
 - [x] App layout + side navigation (Settings pinned to the bottom)
@@ -22,9 +22,9 @@ Operational web app replacing Raphael's paper notebook.
 - [x] Business settings page (name, ABN, contact details, logo)
 - [x] App-wide toast notifications (errors + success) and a confirm-before-delete dialog on every delete
 
-## Later — quality of life for Raphael (post-MVP, same business)
+## Later — quality of life improvements (post-MVP, same business)
 
-These are things Raphael will probably ask for in the first weeks of usage.
+Features likely to be requested in the first weeks of usage.
 
 - Customer search and quick-find by phone / plate
 - CSV export of customers and jobs (so he keeps his data even if he leaves)
@@ -33,7 +33,7 @@ These are things Raphael will probably ask for in the first weeks of usage.
 - Backup of his photos (already in Supabase Storage, but document the export path)
 - Calendar `.ics` feed of upcoming jobs so he can subscribe from his phone
 
-## Future SaaS — moving beyond Raphael
+## Future SaaS — moving beyond the first client
 
 When we sign business #2, here is the order things become real product work, not config tweaks.
 
@@ -59,6 +59,6 @@ When we sign business #2, here is the order things become real product work, not
 - Plan billing (the $39/month + per-job model, applied at the platform level)
 - Audit log / activity feed per business
 - Public marketing site
-- Customer portal (let *Raphael's customers* see their own job history)
+- Customer portal (let customers see their own job history)
 
 The codebase should reach for **configuration over forks**: a new industry is a different default service list and a few field labels, not a new app.

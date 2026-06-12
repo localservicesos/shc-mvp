@@ -404,7 +404,7 @@ hand-written to match. When that drift becomes painful, switch to
 1. **Concurrency on invoice numbers** — accept MVP races; revisit when a
    second business onboards.
 2. **Soft delete vs hard delete** — currently hard-delete; jobs FK to
-   invoices is handled (commit `142853d`). Revisit if Raphael ever asks
+   invoices is handled (commit `142853d`). Revisit if the business owner ever asks
    "where did that customer go?".
 3. **Multi-business switching UI** — `getCurrentBusiness()` is a stub for
    single-business assumption. Real fix is a `default_business_id` on

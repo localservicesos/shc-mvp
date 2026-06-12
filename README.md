@@ -1,10 +1,10 @@
 # Local Service OS
 
 An operational web app for small local service businesses, starting with
-**Raphael's car detailing business** in Australia. It replaces paper/notebook
-tracking of customers, vehicles, bookings, job status, photos, and a simple
-invoice flow — on a multi-tenant-shaped foundation that can later power other
-verticals (cleaning, dog grooming, gardening, tradies, mobile services).
+**Sunshine Hot Cars** — a car detailing business in Australia. It replaces
+paper/notebook tracking of customers, vehicles, bookings, job status, photos,
+and a simple invoice flow — on a multi-tenant-shaped foundation that can later
+power other verticals (cleaning, dog grooming, gardening, tradies, mobile services).
 
 See [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) for what is in and out of scope, and
 [docs/ROADMAP.md](docs/ROADMAP.md) for what comes next.

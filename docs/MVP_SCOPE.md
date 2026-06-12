@@ -1,6 +1,6 @@
 # MVP scope
 
-The first deliverable is an operational web app for **Raphael's car detailing business** in Australia. It replaces paper/notebook tracking of customers, vehicles, bookings, job status, photos, and a simple invoice flow. It is built on a multi-tenant-shaped foundation so the same codebase can later power other small local service businesses (cleaning, dog grooming, gardening, tradies, mobile services, etc.) without a rewrite.
+The first deliverable is an operational web app for **Sunshine Hot Cars**, a car detailing business in Australia. It replaces paper/notebook tracking of customers, vehicles, bookings, job status, photos, and a simple invoice flow. It is built on a multi-tenant-shaped foundation so the same codebase can later power other small local service businesses (cleaning, dog grooming, gardening, tradies, mobile services, etc.) without a rewrite.
 
 ## In scope
 
@@ -56,16 +56,16 @@ Anything outside this list is documented in `docs/ROADMAP.md` and **must not** s
 
 ## Multi-tenant readiness
 
-Although Raphael is the only customer at launch, every operational table carries `business_id`. RLS policies scope rows to the businesses the auth user belongs to (`business_members`). This means adding a second business later is a data + config change, not a code rewrite.
+Although Sunshine Hot Cars is the only client at launch, every operational table carries `business_id`. RLS policies scope rows to the businesses the auth user belongs to (`business_members`). This means adding a second business later is a data + config change, not a code rewrite.
 
 ## Success criteria
 
-The MVP is "done" when Raphael can:
+The MVP is "done" when the business owner can:
 
 1. Sign in.
 2. Add a customer.
 3. Add a vehicle for that customer.
-4. Schedule a job using one of his services (start + end time; the same car can't clash with another booking).
+4. Schedule a job using one of the services (start + end time; the same car can't clash with another booking).
 5. See that job on the dashboard / schedule.
 6. Update its status (booked → completed, or cancelled with a reason).
 7. Attach before/after photos. *(photo UI is built but currently disabled via `showPhotos` flag — enable before shipping)*

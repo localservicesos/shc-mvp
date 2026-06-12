@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
  * These tests drive the real app in a browser against the REMOTE Supabase.
  * All test data is isolated inside a throwaway "test business" created in
  * global setup and deleted in global teardown, so nothing touches the real
- * client's (Raphael's) data — RLS keeps the test tenant fully separate.
+ * business data — RLS keeps the test tenant fully separate.
  *
  * Credentials for the test user come from .env.local:
  *   E2E_TEST_EMAIL / E2E_TEST_PASSWORD  (created by scripts/e2e-setup-user.ts)
