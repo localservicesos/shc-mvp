@@ -33,6 +33,7 @@ declare
   v_job_id    uuid;
   v_svc_id    uuid;
   v_inv_num   int;
+  v_plate_seq int := 0;  -- global vehicle counter so every plate is unique
 
   -- iteration
   i           int;
@@ -174,6 +175,7 @@ begin
     num_vehs := 1 + mod(i, 3);
 
     for j in 1..num_vehs loop
+      v_plate_seq := v_plate_seq + 1;
       insert into vehicles (business_id, customer_id, make, model, year, color, plate, notes)
       values (
         v_biz_id,
@@ -185,7 +187,7 @@ begin
         plate_letters[1 + mod(i,     array_length(plate_letters, 1))]
           || plate_letters[1 + mod(i * 3, array_length(plate_letters, 1))]
           || plate_letters[1 + mod(i * 7, array_length(plate_letters, 1))]
-          || lpad(mod(i * j * 17, 1000)::text, 3, '0'),
+          || lpad(v_plate_seq::text, 3, '0'),
         case when j = 1 then '[mock]' else 'Second vehicle. [mock]' end
       )
       returning id into v_veh_id;
@@ -206,10 +208,13 @@ begin
 
       select base_price into v_price from services where id = v_svc_id;
 
-      -- scatter jobs across the past 90 days and next 14 days
+      -- Scatter jobs across the past 90 days and next 14 days.
+      -- Each of a customer's jobs lands on a DIFFERENT day (base day from i,
+      -- plus j*3 days apart): jobs run 7am–8pm at most, so distinct days can
+      -- never trip the jobs_vehicle_no_overlap exclusion constraint.
       v_start := now()
         - interval '90 days'
-        + make_interval(days => mod(i * j * 17 + j * 3, 104))
+        + make_interval(days => mod(i * 17, 83) + j * 3)
         + make_interval(hours => 7 + mod(i + j, 9));
       v_end   := v_start + make_interval(hours => 1 + mod(i * j, 4));
 
@@ -258,11 +263,11 @@ begin
           values (
             v_biz_id, v_job_id, 'MOCK-' || v_inv_suffix,
             v_subtotal, v_gst, v_total,
-            case
+            (case
               when mod(v_inv_num, 5) = 0 then 'draft'
               when mod(v_inv_num, 3) = 0 then 'sent'
               else                            'paid'
-            end,
+            end)::invoice_status,
             case when mod(v_inv_num, 3) != 0 and mod(v_inv_num, 5) != 0
               then v_end + interval '1 hour' else null end,
             case when mod(v_inv_num, 5) != 0 and mod(v_inv_num, 3) != 0
