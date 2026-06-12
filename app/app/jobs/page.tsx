@@ -55,11 +55,6 @@ export default async function JobsPage({
     page,
   );
 
-  const { startUtc: todayStartUtc } = dayRangeUtc(
-    timezone,
-    dateInTimezone(timezone),
-  );
-
   return (
     <div className="space-y-6">
       <div className="relative flex items-center justify-between">
