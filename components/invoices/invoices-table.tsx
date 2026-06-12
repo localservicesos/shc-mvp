@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import {
   Table,
@@ -10,10 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { InvoiceStatusBadge } from "@/components/invoices/status-badge";
-import { useFilteredIds } from "@/components/search/search-filter-context";
 import { formatMoney } from "@/lib/utils/format";
 import type { InvoiceWithRelations } from "@/lib/db/invoices";
-import type { SearchIndexItem } from "@/types/search";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -24,15 +20,14 @@ function formatDate(iso: string | null): string {
   }).format(new Date(iso));
 }
 
+// Server component on purpose: rows render to HTML once instead of being
+// shipped a second time as serialized client-component props.
 export function InvoicesTable({
   invoices,
-  index,
 }: {
   invoices: InvoiceWithRelations[];
-  index: SearchIndexItem[];
 }) {
-  const ids = useFilteredIds(index);
-  const rows = ids ? invoices.filter((i) => ids.has(i.id)) : invoices;
+  const rows = invoices;
 
   return (
     <div className="rounded-md border">
@@ -53,7 +48,7 @@ export function InvoicesTable({
                 colSpan={5}
                 className="h-24 text-center text-sm text-muted-foreground"
               >
-                No invoices match your search.
+                No invoices to show.
               </TableCell>
             </TableRow>
           ) : (

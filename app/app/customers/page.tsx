@@ -2,11 +2,10 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search/search-bar";
-import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { CustomersTable } from "@/components/customers/customers-table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { loadSearchIndexAction } from "@/app/app/search-actions";
 import { CUSTOMERS_PAGE_SIZE, listCustomersPaged } from "@/lib/db/customers";
-import { buildSearchIndex } from "@/lib/db/search";
 
 export const metadata = {
   title: "Customers",
@@ -20,13 +19,9 @@ export default async function CustomersPage({
   const params = await searchParams;
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
-  const [{ rows: customers, total }, index] = await Promise.all([
-    listCustomersPaged(page),
-    buildSearchIndex("customers"),
-  ]);
+  const { rows: customers, total } = await listCustomersPaged(page);
 
   return (
-    <SearchFilterProvider>
       <div className="space-y-6">
         <div className="relative flex items-center justify-between">
           <div>
@@ -39,7 +34,7 @@ export default async function CustomersPage({
             <div className="pointer-events-auto w-full max-w-sm">
               <SearchBar
                 scope="customers"
-                mode="filter"
+                loadIndex={loadSearchIndexAction}
                 placeholder="Search by name, phone, email, address, or plate…"
               />
             </div>
@@ -67,7 +62,7 @@ export default async function CustomersPage({
           </div>
         ) : (
           <>
-            <CustomersTable customers={customers} index={index} />
+            <CustomersTable customers={customers} />
             <PaginationControls
               page={page}
               pageSize={CUSTOMERS_PAGE_SIZE}
@@ -79,6 +74,5 @@ export default async function CustomersPage({
           </>
         )}
       </div>
-    </SearchFilterProvider>
   );
 }

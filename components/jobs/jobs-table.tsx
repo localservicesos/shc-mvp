@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import {
   Table,
@@ -10,21 +8,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
-import { useFilteredIds } from "@/components/search/search-filter-context";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
 import { jobTotal, type JobWithRelations } from "@/types/jobs";
-import type { SearchIndexItem } from "@/types/search";
 
-export function JobsTable({
-  jobs,
-  index,
-}: {
-  jobs: JobWithRelations[];
-  index: SearchIndexItem[];
-}) {
-  const ids = useFilteredIds(index);
-  const rows = ids ? jobs.filter((j) => ids.has(j.id)) : jobs;
+// Server component on purpose: rows render to HTML once instead of being
+// shipped a second time as serialized client-component props.
+export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
+  const rows = jobs;
 
   return (
     <div className="rounded-md border">
@@ -47,7 +38,7 @@ export function JobsTable({
                 colSpan={7}
                 className="h-24 text-center text-sm text-muted-foreground"
               >
-                No jobs match your search.
+                No jobs to show.
               </TableCell>
             </TableRow>
           ) : (

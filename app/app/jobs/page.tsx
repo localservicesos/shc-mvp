@@ -2,9 +2,9 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search/search-bar";
-import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { JobsTable } from "@/components/jobs/jobs-table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { loadSearchIndexAction } from "@/app/app/search-actions";
 import {
   JOBS_PAGE_SIZE,
   JOB_STATUSES,
@@ -13,7 +13,6 @@ import {
   type JobStatus,
 } from "@/lib/db/jobs";
 import { getCurrentBusiness } from "@/lib/db/current-business";
-import { buildSearchIndex } from "@/lib/db/search";
 
 export const metadata = {
   title: "Jobs",
@@ -51,13 +50,12 @@ export default async function JobsPage({
   const business = await getCurrentBusiness();
   const timezone = business?.timezone ?? "Australia/Brisbane";
 
-  const [{ rows: jobs, total }, index] = await Promise.all([
-    listJobsPaged({ status, from, to, timezone }, page),
-    buildSearchIndex("jobs"),
-  ]);
+  const { rows: jobs, total } = await listJobsPaged(
+    { status, from, to, timezone },
+    page,
+  );
 
   return (
-    <SearchFilterProvider>
     <div className="space-y-6">
       <div className="relative flex items-center justify-between">
         <div>
@@ -70,7 +68,7 @@ export default async function JobsPage({
           <div className="pointer-events-auto w-full max-w-sm">
             <SearchBar
               scope="jobs"
-              mode="filter"
+              loadIndex={loadSearchIndexAction}
               placeholder="Search by customer, plate, or notes…"
             />
           </div>
@@ -166,7 +164,7 @@ export default async function JobsPage({
         </div>
       ) : (
         <>
-          <JobsTable jobs={jobs} index={index} />
+          <JobsTable jobs={jobs} />
           <PaginationControls
             page={page}
             pageSize={JOBS_PAGE_SIZE}
@@ -178,6 +176,5 @@ export default async function JobsPage({
         </>
       )}
     </div>
-    </SearchFilterProvider>
   );
 }

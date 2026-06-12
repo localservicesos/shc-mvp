@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import {
   Table,
@@ -9,19 +7,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useFilteredIds } from "@/components/search/search-filter-context";
 import type { Customer } from "@/lib/db/customers";
-import type { SearchIndexItem } from "@/types/search";
 
-export function CustomersTable({
-  customers,
-  index,
-}: {
-  customers: Customer[];
-  index: SearchIndexItem[];
-}) {
-  const ids = useFilteredIds(index);
-  const rows = ids ? customers.filter((c) => ids.has(c.id)) : customers;
+// Server component on purpose: rows render to HTML once instead of being
+// shipped a second time as serialized client-component props.
+export function CustomersTable({ customers }: { customers: Customer[] }) {
+  const rows = customers;
 
   return (
     <div className="rounded-md border">
@@ -41,7 +32,7 @@ export function CustomersTable({
                 colSpan={4}
                 className="h-24 text-center text-sm text-muted-foreground"
               >
-                No customers match your search.
+                No customers to show.
               </TableCell>
             </TableRow>
           ) : (

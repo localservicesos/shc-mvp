@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { SearchBar } from "@/components/search/search-bar";
-import { SearchFilterProvider } from "@/components/search/search-filter-context";
 import { InvoicesTable } from "@/components/invoices/invoices-table";
 import { PaginationControls } from "@/components/ui/pagination-controls";
+import { loadSearchIndexAction } from "@/app/app/search-actions";
 import { INVOICES_PAGE_SIZE, listInvoicesPaged } from "@/lib/db/invoices";
-import { buildSearchIndex } from "@/lib/db/search";
 
 export const metadata = {
   title: "Invoices",
@@ -18,13 +17,9 @@ export default async function InvoicesPage({
   const params = await searchParams;
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
-  const [{ rows: invoices, total }, index] = await Promise.all([
-    listInvoicesPaged(page),
-    buildSearchIndex("invoices"),
-  ]);
+  const { rows: invoices, total } = await listInvoicesPaged(page);
 
   return (
-    <SearchFilterProvider>
       <div className="space-y-6">
         <div className="relative flex items-center justify-between">
           <div>
@@ -38,7 +33,7 @@ export default async function InvoicesPage({
             <div className="pointer-events-auto w-full max-w-sm">
               <SearchBar
                 scope="invoices"
-                mode="filter"
+                loadIndex={loadSearchIndexAction}
                 placeholder="Search by invoice number or customer…"
               />
             </div>
@@ -61,7 +56,7 @@ export default async function InvoicesPage({
           </div>
         ) : (
           <>
-            <InvoicesTable invoices={invoices} index={index} />
+            <InvoicesTable invoices={invoices} />
             <PaginationControls
               page={page}
               pageSize={INVOICES_PAGE_SIZE}
@@ -73,6 +68,5 @@ export default async function InvoicesPage({
           </>
         )}
       </div>
-    </SearchFilterProvider>
   );
 }
