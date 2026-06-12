@@ -62,7 +62,7 @@ export function Sidebar({ businessName }: { businessName: string }) {
     <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4">
       <Link
         href="/app/dashboard"
-        className="mb-4 flex shrink-0 items-center justify-center rounded-lg dark:bg-gray-200 p-4 transition-opacity hover:opacity-90"
+        className="mb-4 flex shrink-0 items-center justify-center rounded-lg p-4 transition-opacity hover:opacity-90"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
