@@ -55,6 +55,11 @@ export default async function JobsPage({
     page,
   );
 
+  const { startUtc: todayStartUtc } = dayRangeUtc(
+    timezone,
+    dateInTimezone(timezone),
+  );
+
   return (
     <div className="space-y-6">
       <div className="relative flex items-center justify-between">
@@ -73,7 +78,7 @@ export default async function JobsPage({
             />
           </div>
         </div>
-        <Button asChild>
+        <Button asChild className="lg:justify-self-end">
           <Link href="/app/jobs/new">
             <Plus className="mr-2 h-4 w-4" />
             New job
@@ -94,8 +99,8 @@ export default async function JobsPage({
                 })}
                 className={
                   active
-                    ? "rounded-sm bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground"
-                    : "rounded-sm px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                    ? "rounded-sm bg-accent px-2.5 py-1.5 text-xs font-medium text-accent-foreground"
+                    : "rounded-sm px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
                 }
               >
                 {f.label}

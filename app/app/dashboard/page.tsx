@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarClock, CheckCircle2, Plus, Wallet } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
@@ -71,7 +72,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex h-full flex-col gap-6 md:overflow-hidden">
-      <div className="relative flex shrink-0 items-center justify-between gap-3">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
@@ -84,16 +85,14 @@ export default async function DashboardPage() {
             }).format(new Date())}
           </p>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-          <div className="pointer-events-auto w-full max-w-sm">
-            <SearchBar
-              scope="general"
-              loadIndex={loadSearchIndexAction}
-              placeholder="Search customers, vehicles, jobs, invoices…"
-            />
-          </div>
+        <div className="order-last w-full lg:order-none">
+          <SearchBar
+            scope="general"
+            loadIndex={loadSearchIndexAction}
+            placeholder="Search customers, vehicles, jobs, invoices…"
+          />
         </div>
-        <Button asChild>
+        <Button asChild className="lg:justify-self-end">
           <Link href="/app/jobs/new">
             <Plus className="mr-2 h-4 w-4" />
             New job
@@ -126,7 +125,9 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:min-h-0 md:flex-1 md:grid-cols-3 md:items-start">
+      {/* On tablet the buckets fill the leftover height in two rows, with the
+          Today/Upcoming row taller than the full-width Completed row. */}
+      <div className="grid gap-4 md:min-h-0 md:flex-1 md:grid-cols-2 md:grid-rows-[3fr_2fr] lg:grid-cols-3 lg:grid-rows-1 lg:items-start">
         <BucketCard
           title="Today"
           icon={<CalendarClock className="h-4 w-4" />}
@@ -151,6 +152,7 @@ export default async function DashboardPage() {
           total={completedRecently.total}
           emptyText="No completions in the last 7 days."
           viewAllHref={`/app/jobs?status=completed&from=${weekStart}&to=${today}`}
+          className="md:col-span-2 lg:col-span-1"
         />
       </div>
     </div>
@@ -165,6 +167,7 @@ function BucketCard({
   emptyText,
   viewAllHref,
   dateMode = "scheduled",
+  className,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -174,11 +177,12 @@ function BucketCard({
   emptyText: string;
   viewAllHref: string;
   dateMode?: "time" | "scheduled";
+  className?: string;
 }) {
   const visible = jobs;
 
   return (
-    <Card className="flex flex-col md:max-h-full">
+    <Card className={cn("flex flex-col md:max-h-full", className)}>
       <CardHeader className="flex shrink-0 flex-row items-center justify-between gap-2 space-y-0 pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           {icon}
@@ -192,7 +196,10 @@ function BucketCard({
         {visible.length === 0 ? (
           <p className="text-sm text-muted-foreground">{emptyText}</p>
         ) : (
-          <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+          // On mobile the card grows with its content, so cap the list at
+          // roughly 10 rows and scroll the rest; md+ is height-bound by the
+          // viewport-fit grid instead.
+          <ul className="max-h-[36rem] min-h-0 flex-1 space-y-2 overflow-y-auto md:max-h-none">
             {visible.map((job) => {
               const vehicleText = job.vehicle
                 ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]

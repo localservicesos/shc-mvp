@@ -23,7 +23,7 @@ export default async function CustomersPage({
 
   return (
       <div className="space-y-6">
-        <div className="relative flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
           <div>
             <h1 className="text-2xl font-semibold">Customers</h1>
             <p className="text-sm text-muted-foreground">
@@ -39,7 +39,7 @@ export default async function CustomersPage({
               />
             </div>
           </div>
-          <Button asChild>
+          <Button asChild className="lg:justify-self-end">
             <Link href="/app/customers/new">
               <Plus className="mr-2 h-4 w-4" />
               New customer

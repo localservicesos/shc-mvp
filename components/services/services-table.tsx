@@ -34,9 +34,9 @@ export function ServicesTable({
         <TableHeader>
           <TableRow>
             <TableHead>Name</TableHead>
-            <TableHead className="hidden md:table-cell">Description</TableHead>
+            <TableHead className="hidden lg:table-cell">Description</TableHead>
             <TableHead className="text-right">Base price</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead className="hidden sm:table-cell">Status</TableHead>
             <TableHead className="w-0" />
           </TableRow>
         </TableHeader>
@@ -53,14 +53,21 @@ export function ServicesTable({
           ) : (
             rows.map((s) => (
               <TableRow key={s.id}>
-                <TableCell className="font-medium">{s.name}</TableCell>
-                <TableCell className="hidden max-w-md truncate text-muted-foreground md:table-cell">
+                <TableCell className="whitespace-normal font-medium">
+                  {s.name}
+                  {!s.active ? (
+                    <span className="block text-xs font-normal text-muted-foreground sm:hidden">
+                      Inactive
+                    </span>
+                  ) : null}
+                </TableCell>
+                <TableCell className="hidden max-w-md truncate text-muted-foreground lg:table-cell">
                   {s.description ?? "—"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {formatMoney(s.base_price)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <span
                     className={
                       s.active

@@ -21,7 +21,7 @@ export default async function InvoicesPage({
 
   return (
       <div className="space-y-6">
-        <div className="relative flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
           <div>
             <h1 className="text-2xl font-semibold">Invoices</h1>
             <p className="text-sm text-muted-foreground">

@@ -84,6 +84,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --scrollbar-thumb: oklch(0.85 0 0);
+  --scrollbar-thumb-hover: oklch(0.75 0 0);
 }
 
 .dark {
@@ -121,11 +123,35 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --scrollbar-thumb: oklch(0.32 0 0);
+  --scrollbar-thumb-hover: oklch(0.42 0 0);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* Slim, theme-aware scrollbars (scrollbar-width doesn't inherit, so it
+       goes on every element; the color inherits from html below). */
+    scrollbar-width: thin;
+  }
+  html {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  /* Fallback for browsers without scrollbar-color support (Safari). Engines
+     that support the standard properties ignore these pseudo-elements. */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
   }
   body {
     @apply bg-background text-foreground;

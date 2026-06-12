@@ -20,23 +20,21 @@ export default async function ServicesPage() {
   return (
     <SearchFilterProvider>
       <div className="space-y-6">
-        <div className="relative flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
           <div>
             <h1 className="text-2xl font-semibold">Services</h1>
             <p className="text-sm text-muted-foreground">
               What you offer. Active services show up when creating jobs.
             </p>
           </div>
-          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-            <div className="pointer-events-auto w-full max-w-sm">
-              <SearchBar
-                scope="services"
-                mode="filter"
-                placeholder="Search by name…"
-              />
-            </div>
+          <div className="order-last w-full lg:order-none">
+            <SearchBar
+              scope="services"
+              mode="filter"
+              placeholder="Search by name…"
+            />
           </div>
-          <Button asChild>
+          <Button asChild className="lg:justify-self-end">
             <Link href="/app/services/new">
               <Plus className="mr-2 h-4 w-4" />
               New service

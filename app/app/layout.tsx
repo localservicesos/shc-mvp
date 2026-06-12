@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import { Sidebar } from "@/components/layout/sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
+import { MobileHeader } from "@/components/layout/mobile-header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FlashToast } from "@/components/flash-toast";
 
@@ -47,12 +48,13 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex h-svh overflow-hidden print:h-auto print:overflow-visible">
-      <aside className="hidden h-svh w-60 shrink-0 flex-col border-r bg-background md:flex print:hidden">
+    <div className="flex h-svh flex-col overflow-hidden md:flex-row print:h-auto print:overflow-visible">
+      <MobileHeader businessName={business.name} email={user.email ?? ""} />
+      <aside className="hidden h-svh w-48 shrink-0 flex-col border-r bg-background md:flex xl:w-60 print:hidden">
         <Sidebar businessName={business.name} />
         <UserMenu email={user.email ?? ""} />
       </aside>
-      <main className="relative flex flex-1 flex-col overflow-hidden print:overflow-visible">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden print:overflow-visible">
         <Suspense fallback={null}>
           <FlashToast />
         </Suspense>
@@ -60,10 +62,10 @@ export default async function AppLayout({
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10 bg-[url('/bg-studio.webp')] bg-cover bg-center bg-no-repeat opacity-[0.05] dark:opacity-[0.05] print:hidden"
         />
-        <div className="absolute right-6 top-6 z-20 print:hidden">
+        <div className="absolute right-6 top-6 z-20 hidden xl:block print:hidden">
           <ThemeToggle />
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-6 pr-16 sm:pr-20 print:overflow-visible">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 xl:pr-20 print:overflow-visible">
           {children}
         </div>
       </main>

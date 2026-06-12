@@ -17,17 +17,38 @@ import { jobTotal, type JobWithRelations } from "@/types/jobs";
 export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
   const rows = jobs;
 
+  // Rows are chronological (oldest first), so on load anchor the viewport at
+  // the first job of today (or the next upcoming one) — earlier jobs stay
+  // reachable by scrolling up.
+  const todayStartTs = todayStartUtc ? new Date(todayStartUtc).getTime() : NaN;
+  const anchorIndex = Number.isNaN(todayStartTs)
+    ? -1
+    : rows.findIndex(
+        (j) =>
+          j.scheduled_start &&
+          new Date(j.scheduled_start).getTime() >= todayStartTs,
+      );
+  const anchorRef = React.useRef<HTMLTableRowElement | null>(null);
+  const didScroll = React.useRef(false);
+  React.useEffect(() => {
+    if (didScroll.current || !anchorRef.current) return;
+    didScroll.current = true;
+    anchorRef.current.scrollIntoView({ block: "start" });
+  }, []);
+
   return (
     <div className="rounded-md border">
-      <Table>
+      {/* Smaller text on tablet, where date/customer/vehicle/plate/status
+          must share the narrow space; Service and Total wait for lg. */}
+      <Table className="md:max-lg:text-[13px]">
         <TableHeader>
           <TableRow>
             <TableHead>When</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead className="hidden md:table-cell">Vehicle</TableHead>
             <TableHead className="hidden md:table-cell">Plate</TableHead>
-            <TableHead className="hidden md:table-cell">Service</TableHead>
-            <TableHead className="text-right">Total</TableHead>
+            <TableHead className="hidden lg:table-cell">Service</TableHead>
+            <TableHead className="text-right md:max-lg:hidden">Total</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
@@ -42,14 +63,19 @@ export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
               </TableCell>
             </TableRow>
           ) : (
-            rows.map((job) => {
+            rows.map((job, i) => {
               const vehicleText = job.vehicle
                 ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
                     .filter(Boolean)
                     .join(" ") || job.vehicle.plate
                 : "—";
               return (
-                <TableRow key={job.id}>
+                <TableRow
+                  key={job.id}
+                  ref={i === anchorIndex ? anchorRef : undefined}
+                  // Leave room above the anchored row for the table header.
+                  className={cn(ROW_TINT[job.status], "scroll-mt-10")}
+                >
                   <TableCell className="whitespace-nowrap">
                     <Link
                       href={`/app/jobs/${job.id}`}
@@ -58,7 +84,7 @@ export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
                       {formatScheduled(job.scheduled_start)}
                     </Link>
                   </TableCell>
-                  <TableCell className="font-medium">
+                  <TableCell className="whitespace-normal font-medium">
                     {job.customer?.name ?? "—"}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
@@ -67,10 +93,10 @@ export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
                   <TableCell className="hidden md:table-cell font-mono">
                     {job.vehicle?.plate ?? "—"}
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="hidden lg:table-cell">
                     {job.service?.name ?? "—"}
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  <TableCell className="text-right tabular-nums md:max-lg:hidden">
                     {job.price !== null || job.discount > 0 || job.extra > 0
                       ? formatMoney(jobTotal(job))
                       : "—"}
