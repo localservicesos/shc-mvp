@@ -47,6 +47,23 @@ export async function listCustomers(): Promise<Customer[]> {
   return (data ?? []).map(normalizeCustomer);
 }
 
+export type CustomerOption = { id: string; name: string };
+
+/**
+ * id + name only — for form pickers. Skips notes/address/timestamps the
+ * picker never shows, which matters once there are hundreds of customers.
+ */
+export async function listCustomerOptions(): Promise<CustomerOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name")
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map((c) => ({ id: c.id, name: toTitleCase(c.name) }));
+}
+
 export const CUSTOMERS_PAGE_SIZE = 50;
 
 /**

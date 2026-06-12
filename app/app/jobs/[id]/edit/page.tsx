@@ -9,8 +9,8 @@ import {
 } from "@/components/ui/card";
 import { JobForm } from "@/components/forms/job-form";
 import { getJob } from "@/lib/db/jobs";
-import { listCustomers } from "@/lib/db/customers";
-import { listAllVehicles } from "@/lib/db/vehicles";
+import { listCustomerOptions } from "@/lib/db/customers";
+import { listVehicleOptions } from "@/lib/db/vehicles";
 import { listActiveServices } from "@/lib/db/services";
 import { toDateTimeLocalValue } from "@/lib/utils/date";
 import { updateJobAction } from "../../actions";
@@ -27,8 +27,8 @@ export default async function EditJobPage({
   const { id } = await params;
   const [job, customers, vehicles, services] = await Promise.all([
     getJob(id),
-    listCustomers(),
-    listAllVehicles(),
+    listCustomerOptions(),
+    listVehicleOptions(),
     listActiveServices(),
   ]);
   if (!job) notFound();
@@ -59,15 +59,8 @@ export default async function EditJobPage({
         </CardHeader>
         <CardContent>
           <JobForm
-            customers={customers.map((c) => ({ id: c.id, name: c.name }))}
-            vehicles={vehicles.map((v) => ({
-              id: v.id,
-              customer_id: v.customer_id,
-              make: v.make,
-              model: v.model,
-              year: v.year,
-              plate: v.plate,
-            }))}
+            customers={customers}
+            vehicles={vehicles}
             services={servicePool.map((s) => ({
               id: s.id,
               name: s.name,

@@ -8,8 +8,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { JobForm } from "@/components/forms/job-form";
-import { listCustomers } from "@/lib/db/customers";
-import { listAllVehicles } from "@/lib/db/vehicles";
+import { listCustomerOptions } from "@/lib/db/customers";
+import { listVehicleOptions } from "@/lib/db/vehicles";
 import { listActiveServices } from "@/lib/db/services";
 import { createJobAction } from "../actions";
 
@@ -24,8 +24,8 @@ export default async function NewJobPage({
 }) {
   const params = await searchParams;
   const [customers, vehicles, services] = await Promise.all([
-    listCustomers(),
-    listAllVehicles(),
+    listCustomerOptions(),
+    listVehicleOptions(),
     listActiveServices(),
   ]);
 
@@ -48,15 +48,8 @@ export default async function NewJobPage({
         </CardHeader>
         <CardContent>
           <JobForm
-            customers={customers.map((c) => ({ id: c.id, name: c.name }))}
-            vehicles={vehicles.map((v) => ({
-              id: v.id,
-              customer_id: v.customer_id,
-              make: v.make,
-              model: v.model,
-              year: v.year,
-              plate: v.plate,
-            }))}
+            customers={customers}
+            vehicles={vehicles}
             services={services.map((s) => ({
               id: s.id,
               name: s.name,
