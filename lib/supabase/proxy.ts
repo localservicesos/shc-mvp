@@ -27,10 +27,15 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: do not run code between createServerClient and getUser.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANT: do not run code between createServerClient and getClaims.
+  //
+  // getClaims verifies the session JWT locally (against the project's JWT
+  // signing keys) instead of calling the Auth server on every navigation the
+  // way getUser() does — saving a network round-trip per request. With legacy
+  // symmetric JWT secrets it transparently falls back to a server check, so
+  // enable "JWT signing keys" in Supabase → Settings → API to get the benefit.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims ?? null;
 
   const pathname = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
