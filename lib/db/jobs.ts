@@ -307,17 +307,18 @@ export async function listJobsForCustomer(
 
 /**
  * Jobs whose scheduled_start falls in the given UTC range. Used by the
- * Dashboard (today bucket) and the Schedule view.
+ * Dashboard buckets. `limit` caps the rows fetched while `total` still counts
+ * every match, so the UI can show "15 of 230" without transferring 230 rows.
  */
 export async function listJobsBetween(
   startUtc: string,
   endUtc: string,
-  options: { status?: JobStatus | "all" } = {},
-): Promise<JobWithRelations[]> {
+  options: { status?: JobStatus | "all"; limit?: number } = {},
+): Promise<Paged<JobWithRelations>> {
   const supabase = await createClient();
   let query = supabase
     .from("jobs")
-    .select(RELATIONS)
+    .select(RELATIONS, { count: "exact" })
     .gte("scheduled_start", startUtc)
     .lt("scheduled_start", endUtc)
     .order("scheduled_start", { ascending: true });
@@ -325,10 +326,16 @@ export async function listJobsBetween(
   if (options.status && options.status !== "all") {
     query = query.eq("status", options.status);
   }
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
 }
 
 /**
@@ -362,23 +369,58 @@ export async function listJobsOverlapping(
   return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
 }
 
-/** Jobs with the given status, optionally restricted to scheduled_start >= some UTC instant. */
+/**
+ * Jobs with the given status, optionally restricted to scheduled_start >= some
+ * UTC instant. `limit` caps the rows fetched; `total` counts every match.
+ */
 export async function listJobsByStatus(
   status: JobStatus,
-  options: { fromUtc?: string } = {},
-): Promise<JobWithRelations[]> {
+  options: { fromUtc?: string; limit?: number } = {},
+): Promise<Paged<JobWithRelations>> {
   const supabase = await createClient();
   let query = supabase
     .from("jobs")
-    .select(RELATIONS)
+    .select(RELATIONS, { count: "exact" })
     .eq("status", status)
     .order("scheduled_start", { ascending: true, nullsFirst: false });
 
   if (options.fromUtc) {
     query = query.gte("scheduled_start", options.fromUtc);
   }
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) throw error;
-  return ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob);
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
+}
+
+/**
+ * Sum of `price` over jobs with the given status in [startUtc, endUtc).
+ * Fetches only the price column — no relations — so the dashboard income
+ * card doesn't pay for a full job payload it never renders. (A true SQL
+ * SUM() needs PostgREST aggregates enabled or an RPC; this stays portable.)
+ */
+export async function sumJobPrices(
+  startUtc: string,
+  endUtc: string,
+  status: JobStatus,
+): Promise<{ total: number; count: number }> {
+  const supabase = await createClient();
+  const { data, error, count } = await supabase
+    .from("jobs")
+    .select("price", { count: "exact" })
+    .eq("status", status)
+    .gte("scheduled_start", startUtc)
+    .lt("scheduled_start", endUtc);
+
+  if (error) throw error;
+  return {
+    total: (data ?? []).reduce((sum, j) => sum + (j.price ?? 0), 0),
+    count: count ?? 0,
+  };
 }
