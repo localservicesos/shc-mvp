@@ -11,23 +11,29 @@ import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { formatMoney } from "@/lib/utils/format";
 import { formatScheduled } from "@/lib/utils/date";
 import {
+  effectiveJobStatus,
   jobTotal,
-  type JobStatus,
+  type JobDisplayStatus,
   type JobWithRelations,
 } from "@/types/jobs";
 
 // Subtle per-status row tint so the status reads at a glance even where
 // the badge column is tight.
-const ROW_TINT: Record<JobStatus, string> = {
-  booked: "bg-blue-500/5",
-  completed: "bg-emerald-500/5",
-  cancelled: "bg-rose-500/5",
+const ROW_TINT: Record<JobDisplayStatus, string> = {
+  booked: "bg-blue-500/15",
+  in_progress: "bg-yellow-400/30",
+  needs_attention: "bg-orange-600/40",
+  completed: "bg-emerald-500/15",
+  cancelled: "bg-rose-500/20",
 };
 
 // Server component on purpose: rows render to HTML once instead of being
 // shipped a second time as serialized client-component props.
 export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
   const rows = jobs;
+  // Snapshot "now" once so every row derives in_progress/needs_attention against
+  // the same instant.
+  const now = new Date().getTime();
 
   return (
     <div className="rounded-md border">
@@ -62,8 +68,9 @@ export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
                     .filter(Boolean)
                     .join(" ") || job.vehicle.plate
                 : "—";
+              const displayStatus = effectiveJobStatus(job, now);
               return (
-                <TableRow key={job.id} className={ROW_TINT[job.status]}>
+                <TableRow key={job.id} className={ROW_TINT[displayStatus]}>
                   <TableCell className="whitespace-nowrap">
                     <Link
                       href={`/app/jobs/${job.id}`}
@@ -90,7 +97,7 @@ export function JobsTable({ jobs }: { jobs: JobWithRelations[] }) {
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    <JobStatusBadge status={job.status} />
+                    <JobStatusBadge status={displayStatus} />
                   </TableCell>
                 </TableRow>
               );

@@ -1,18 +1,23 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { dateInTimezone, jobDateKeys, monthGridDays } from "@/lib/utils/date";
-import type { JobStatus, JobWithRelations } from "@/types/jobs";
+import { effectiveJobStatus } from "@/types/jobs";
+import type { JobDisplayStatus, JobWithRelations } from "@/types/jobs";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MAX_CHIPS = 3;
 
-const CHIP_STYLES: Record<JobStatus, string> = {
+const CHIP_STYLES: Record<JobDisplayStatus, string> = {
   booked:
-    "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100",
+    "border-blue-400 bg-blue-200 text-blue-900 dark:border-blue-500/60 dark:bg-blue-500/35 dark:text-blue-50",
+  in_progress:
+    "border-yellow-400 bg-yellow-200 text-yellow-900 dark:border-yellow-500/60 dark:bg-yellow-500/35 dark:text-yellow-50",
+  needs_attention:
+    "border-orange-600 bg-orange-300 text-orange-950 dark:border-orange-500/70 dark:bg-orange-600/50 dark:text-orange-50",
   completed:
-    "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-100",
+    "border-emerald-400 bg-emerald-200 text-emerald-900 dark:border-emerald-500/60 dark:bg-emerald-500/35 dark:text-emerald-50",
   cancelled:
-    "border-rose-300 bg-rose-50 text-rose-900 line-through opacity-70 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-100",
+    "border-rose-400 bg-rose-200 text-rose-900 line-through opacity-70 dark:border-rose-500/60 dark:bg-rose-500/35 dark:text-rose-50",
 };
 
 function formatChipTime(iso: string | null): string {
@@ -42,6 +47,8 @@ export function MonthGrid({
 }) {
   const days = monthGridDays(monthDate);
   const viewedMonth = monthDate.slice(0, 7);
+  // Snapshot "now" once so every chip derives its status consistently.
+  const now = new Date().getTime();
 
   // Group jobs by every local date they span, so a multi-day booking appears
   // on each day it covers.
@@ -124,7 +131,7 @@ export function MonthGrid({
                       } · ${job.service?.name ?? ""}`}
                       className={cn(
                         "block truncate rounded border px-1 py-0.5 text-[11px] leading-tight hover:shadow-sm",
-                        CHIP_STYLES[job.status],
+                        CHIP_STYLES[effectiveJobStatus(job, now)],
                       )}
                     >
                       <span className="tabular-nums opacity-70">

@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { CalendarClock, CheckCircle2, Plus, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  Loader,
+  Plus,
+  Wallet,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +15,11 @@ import { SearchBar } from "@/components/search/search-bar";
 import { loadSearchIndexAction } from "@/app/app/search-actions";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 import {
+  effectiveJobStatus,
   listJobsBetween,
   listJobsByStatus,
+  listJobsInProgress,
+  listJobsNeedingReview,
   sumJobPrices,
   type JobWithRelations,
 } from "@/lib/db/jobs";
@@ -49,20 +59,29 @@ export default async function DashboardPage() {
   );
   const tomorrow = shiftDateString(today, 1);
   const { startUtc: tomorrowStartUtc } = dayRangeUtc(tz, tomorrow);
+  const nowUtc = new Date().toISOString();
 
-  const [todayJobs, booked, completedRecently, monthCompleted] =
-    await Promise.all([
-      listJobsBetween(todayStart, todayEnd, { limit: BUCKET_LIMIT }),
-      listJobsByStatus("booked", {
-        fromUtc: tomorrowStartUtc,
-        limit: BUCKET_LIMIT,
-      }),
-      listJobsBetween(weekStartUtc, weekEndUtc, {
-        status: "completed",
-        limit: BUCKET_LIMIT,
-      }),
-      sumJobPrices(monthStartUtc, monthEndUtc, "completed"),
-    ]);
+  const [
+    todayJobs,
+    booked,
+    completedRecently,
+    monthCompleted,
+    needsReview,
+    inProgress,
+  ] = await Promise.all([
+    listJobsBetween(todayStart, todayEnd, { limit: BUCKET_LIMIT }),
+    listJobsByStatus("booked", {
+      fromUtc: tomorrowStartUtc,
+      limit: BUCKET_LIMIT,
+    }),
+    listJobsBetween(weekStartUtc, weekEndUtc, {
+      status: "completed",
+      limit: BUCKET_LIMIT,
+    }),
+    sumJobPrices(monthStartUtc, monthEndUtc, "completed"),
+    listJobsNeedingReview(nowUtc, { limit: BUCKET_LIMIT }),
+    listJobsInProgress(nowUtc, { limit: BUCKET_LIMIT }),
+  ]);
 
   const monthIncome = monthCompleted.total;
   const monthLabel = new Intl.DateTimeFormat("en-AU", {
@@ -71,7 +90,7 @@ export default async function DashboardPage() {
   }).format(new Date());
 
   return (
-    <div className="flex h-full flex-col gap-6 md:overflow-hidden">
+    <div className="flex h-full flex-col gap-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
         <div>
           <h1 className="text-2xl font-semibold">Dashboard</h1>
@@ -100,7 +119,7 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
-      <Card className="shrink-0">
+      <Card className="shrink-0 mx-1">
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
@@ -125,9 +144,39 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* On tablet the buckets fill the leftover height in two rows, with the
-          Today/Upcoming row taller than the full-width Completed row. */}
-      <div className="grid gap-4 md:min-h-0 md:flex-1 md:grid-cols-2 md:grid-rows-[3fr_2fr] lg:grid-cols-3 lg:grid-rows-1 lg:items-start">
+      {/* All status buckets share one uniform 3-column grid. The two
+          attention cards (In progress / Needs attention) only appear when they
+          have rows, taking the same-sized slots as the rest. */}
+      <div className="grid gap-4 mx-1 sm:grid-cols-2 lg:grid-cols-3">
+        {needsReview.total > 0 ? (
+          <BucketCard
+            title="Needs attention"
+            icon={
+              <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-300" />
+            }
+            jobs={needsReview.rows}
+            total={needsReview.total}
+            emptyText="Nothing waiting on you."
+            viewAllHref="/app/jobs?status=needs_attention"
+            className="border-orange-300 bg-orange-50 dark:border-orange-500/30 dark:bg-orange-500/20"
+          />
+        ) : null}
+
+        {inProgress.total > 0 ? (
+          <BucketCard
+            title="In progress"
+            icon={
+              <Loader className="h-4 w-4 text-yellow-600 dark:text-yellow-300" />
+            }
+            jobs={inProgress.rows}
+            total={inProgress.total}
+            emptyText="Nothing running right now."
+            viewAllHref="/app/jobs?status=in_progress"
+            dateMode="time"
+            className="border-yellow-300 bg-yellow-50 dark:border-yellow-500/30 dark:bg-yellow-500/10"
+          />
+        ) : null}
+
         <BucketCard
           title="Today"
           icon={<CalendarClock className="h-4 w-4" />}
@@ -152,7 +201,6 @@ export default async function DashboardPage() {
           total={completedRecently.total}
           emptyText="No completions in the last 7 days."
           viewAllHref={`/app/jobs?status=completed&from=${weekStart}&to=${today}`}
-          className="md:col-span-2 lg:col-span-1"
         />
       </div>
     </div>
@@ -180,6 +228,9 @@ function BucketCard({
   className?: string;
 }) {
   const visible = jobs;
+  // Snapshot "now" so each row's badge derives in_progress/needs_attention against
+  // the same instant.
+  const now = new Date().getTime();
 
   return (
     <Card className={cn("flex flex-col md:max-h-full", className)}>
@@ -188,9 +239,7 @@ function BucketCard({
           {icon}
           {title}
         </CardTitle>
-        <span className="text-2xl font-semibold tabular-nums">
-          {total}
-        </span>
+        <span className="text-2xl font-semibold tabular-nums">{total}</span>
       </CardHeader>
       <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
         {visible.length === 0 ? (
@@ -232,7 +281,7 @@ function BucketCard({
                           {formatMoney(job.price)}
                         </span>
                       ) : null}
-                      <JobStatusBadge status={job.status} />
+                      <JobStatusBadge status={effectiveJobStatus(job, now)} />
                     </div>
                   </Link>
                 </li>

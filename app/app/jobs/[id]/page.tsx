@@ -10,11 +10,12 @@ import {
 } from "@/components/ui/card";
 import { JobStatusBadge } from "@/components/jobs/status-badge";
 import { JobStatusActions } from "@/components/jobs/status-actions";
-import { getJob, jobTotal } from "@/lib/db/jobs";
+import { ExtendTimeForm } from "@/components/jobs/extend-time-form";
+import { effectiveJobStatus, getJob, jobTotal } from "@/lib/db/jobs";
 import { getInvoiceByJob } from "@/lib/db/invoices";
 import { listJobPhotos } from "@/lib/db/job-photos";
 import { formatMoney } from "@/lib/utils/format";
-import { formatScheduled } from "@/lib/utils/date";
+import { formatScheduled, toDateTimeLocalValue } from "@/lib/utils/date";
 import { generateInvoiceFromJobAction } from "@/app/app/invoices/actions";
 import { DeleteJobButton } from "./_components/delete-job-button";
 import { uploadJobPhotoAction } from "./photos/actions";
@@ -49,6 +50,7 @@ export default async function JobDetailPage({
 
   const hasAdjustment = job.discount > 0 || job.extra > 0;
   const total = jobTotal(job);
+  const displayStatus = effectiveJobStatus(job, new Date().getTime());
 
   const vehicleText = job.vehicle
     ? [job.vehicle.year, job.vehicle.make, job.vehicle.model]
@@ -72,7 +74,7 @@ export default async function JobDetailPage({
             <h1 className="text-2xl font-semibold">
               {job.customer?.name ?? "Job"}
             </h1>
-            <JobStatusBadge status={job.status} />
+            <JobStatusBadge status={displayStatus} />
           </div>
           <p className="text-sm text-muted-foreground">
             {formatScheduled(job.scheduled_start)}
@@ -97,6 +99,26 @@ export default async function JobDetailPage({
           <CardTitle className="text-base">Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {displayStatus === "needs_attention" ? (
+            <div className="rounded-md border border-orange-300 bg-orange-50 px-3 py-3 dark:border-orange-500/30 dark:bg-orange-500/10">
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-300">
+                This job&apos;s scheduled time has ended.
+              </p>
+              <p className="mt-0.5 text-xs text-orange-700/90 dark:text-orange-300/80">
+                Mark it as completed, or extend the time if it&apos;s still
+                running.
+              </p>
+              <div className="mt-3">
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                  New end time
+                </p>
+                <ExtendTimeForm
+                  jobId={job.id}
+                  currentEnd={toDateTimeLocalValue(job.scheduled_end)}
+                />
+              </div>
+            </div>
+          ) : null}
           <JobStatusActions id={job.id} status={job.status} />
           {job.status === "cancelled" ? (
             <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-500/20 dark:bg-rose-500/10">

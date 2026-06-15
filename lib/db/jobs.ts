@@ -9,6 +9,7 @@ import {
 } from "@/types/jobs";
 import type {
   Job,
+  JobDisplayStatus,
   JobInput,
   JobStatus,
   JobWithRelations,
@@ -16,14 +17,18 @@ import type {
 
 export type {
   Job,
+  JobDisplayStatus,
   JobInput,
   JobStatus,
   JobWithRelations,
 } from "@/types/jobs";
 export {
+  JOB_DISPLAY_STATUSES,
+  JOB_DISPLAY_STATUS_LABELS,
   JOB_STATUSES,
   JOB_STATUS_LABELS,
   VEHICLE_CONFLICT_MESSAGE,
+  effectiveJobStatus,
   jobTotal,
 } from "@/types/jobs";
 
@@ -100,7 +105,9 @@ function isVehicleOverlapViolation(error: unknown): boolean {
 }
 
 export type ListJobsFilters = {
-  status?: JobStatus | "all";
+  // Accepts the derived display statuses too: `in_progress` and `needs_attention`
+  // map to a stored `booked` row plus a scheduled-time window (see queryJobs).
+  status?: JobDisplayStatus | "all";
   from?: string;       // local calendar date YYYY-MM-DD in the business timezone
   to?: string;         // local calendar date YYYY-MM-DD in the business timezone
   timezone?: string;   // business timezone — required when from/to are used
@@ -123,7 +130,35 @@ async function queryJobs(
     .order("created_at", { ascending: false });
 
   if (filters.status && filters.status !== "all") {
-    query = query.eq("status", filters.status);
+    // Derived statuses are a `booked` row narrowed by a time window; the stored
+    // statuses match the column directly. `now` uses absolute instants so the
+    // window stays timezone-safe.
+    if (filters.status === "booked") {
+      const now = new Date().toISOString();
+      // Only jobs that DERIVE to "booked": stored booked AND not currently in
+      // their window (in_progress) and not past it (needs_attention). Those two
+      // are stored as booked too but belong only to their own filters. A job
+      // with no start, or started-but-no-end, conservatively counts as booked.
+      query = query
+        .eq("status", "booked")
+        .or(
+          `scheduled_start.gt.${now},scheduled_start.is.null,scheduled_end.is.null`,
+        );
+    } else if (filters.status === "in_progress") {
+      const now = new Date().toISOString();
+      query = query
+        .eq("status", "booked")
+        .lte("scheduled_start", now)
+        .gt("scheduled_end", now);
+    } else if (filters.status === "needs_attention") {
+      const now = new Date().toISOString();
+      query = query
+        .eq("status", "booked")
+        .lt("scheduled_end", now)
+        .not("scheduled_end", "is", null);
+    } else {
+      query = query.eq("status", filters.status);
+    }
   }
   if (filters.from) {
     const tz = filters.timezone ?? "Australia/Brisbane";
@@ -409,6 +444,67 @@ export async function listJobsByStatus(
   if (options.fromUtc) {
     query = query.gte("scheduled_start", options.fromUtc);
   }
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error, count } = await query;
+  if (error) throw error;
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
+}
+
+/**
+ * Booked jobs currently within their scheduled window ("in progress") — stored
+ * `booked` AND scheduled_start <= now < scheduled_end. Mirrors the derived
+ * `in_progress` display status. `limit` caps the rows; `total` counts all.
+ */
+export async function listJobsInProgress(
+  nowUtc: string,
+  options: { limit?: number } = {},
+): Promise<Paged<JobWithRelations>> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("jobs")
+    .select(RELATIONS, { count: "exact" })
+    .eq("status", "booked")
+    .lte("scheduled_start", nowUtc)
+    .gt("scheduled_end", nowUtc)
+    .order("scheduled_end", { ascending: true });
+
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error, count } = await query;
+  if (error) throw error;
+  return {
+    rows: ((data ?? []) as unknown as JobWithRelations[]).map(normalizeJob),
+    total: count ?? 0,
+  };
+}
+
+/**
+ * Booked jobs whose scheduled window has already ended ("needs review") — the
+ * owner must mark them completed or extend the time. Mirrors the derived
+ * `needs_attention` display status: stored `booked` AND scheduled_end < now.
+ * `limit` caps the rows fetched while `total` counts every match.
+ */
+export async function listJobsNeedingReview(
+  nowUtc: string,
+  options: { limit?: number } = {},
+): Promise<Paged<JobWithRelations>> {
+  const supabase = await createClient();
+  let query = supabase
+    .from("jobs")
+    .select(RELATIONS, { count: "exact" })
+    .eq("status", "booked")
+    .not("scheduled_end", "is", null)
+    .lt("scheduled_end", nowUtc)
+    .order("scheduled_end", { ascending: true });
+
   if (options.limit) {
     query = query.limit(options.limit);
   }
