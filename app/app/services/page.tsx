@@ -20,26 +20,29 @@ export default async function ServicesPage() {
   return (
     <SearchFilterProvider>
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
-          <div>
-            <h1 className="text-2xl font-semibold">Services</h1>
-            <p className="text-sm text-muted-foreground">
-              What you offer. Active services show up when creating jobs.
-            </p>
-          </div>
-          <div className="order-last w-full lg:order-none">
+        {/* Mobile: row1 = title + button, row2 = full-width subtitle, row3 =
+            search. lg: 3 columns with title/subtitle stacked in column 1. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)] lg:gap-3">
+          <h1 className="text-2xl font-semibold">Services</h1>
+          <Button
+            asChild
+            className="shrink-0 justify-self-end lg:col-start-3 lg:row-span-2 lg:self-center"
+          >
+            <Link href="/app/services/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New service
+            </Link>
+          </Button>
+          <p className="col-span-2 text-sm text-muted-foreground lg:col-span-1 lg:col-start-1 lg:row-start-2">
+            What you offer. Active services show up when creating jobs.
+          </p>
+          <div className="col-span-2 lg:col-span-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
             <SearchBar
               scope="services"
               mode="filter"
               placeholder="Search by name…"
             />
           </div>
-          <Button asChild className="lg:justify-self-end">
-            <Link href="/app/services/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New service
-            </Link>
-          </Button>
         </div>
 
         {services.length === 0 ? (

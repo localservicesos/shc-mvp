@@ -63,28 +63,29 @@ export default async function JobsPage({
 
   return (
     <div className="space-y-6">
-      <div className="relative flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Jobs</h1>
-          <p className="text-sm text-muted-foreground">
-            Every booking and its current status.
-          </p>
-        </div>
-        <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-          <div className="pointer-events-auto w-full max-w-sm">
-            <SearchBar
-              scope="jobs"
-              loadIndex={loadSearchIndexAction}
-              placeholder="Search by customer, plate, or notes…"
-            />
-          </div>
-        </div>
-        <Button asChild className="lg:justify-self-end">
+      {/* Mobile: row1 = title + button, row2 = full-width subtitle, row3 =
+          search. lg: 3 columns with title/subtitle stacked in column 1. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)] lg:gap-3">
+        <h1 className="text-2xl font-semibold">Jobs</h1>
+        <Button
+          asChild
+          className="shrink-0 justify-self-end lg:col-start-3 lg:row-span-2 lg:self-center"
+        >
           <Link href="/app/jobs/new">
             <Plus className="mr-2 h-4 w-4" />
             New job
           </Link>
         </Button>
+        <p className="col-span-2 text-sm text-muted-foreground lg:col-span-1 lg:col-start-1 lg:row-start-2">
+          Every booking and its current status.
+        </p>
+        <div className="col-span-2 lg:col-span-1 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
+          <SearchBar
+            scope="jobs"
+            loadIndex={loadSearchIndexAction}
+            placeholder="Search by customer, plate, or notes…"
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

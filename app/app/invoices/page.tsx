@@ -21,7 +21,7 @@ export default async function InvoicesPage({
 
   return (
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">Invoices</h1>
             <p className="text-sm text-muted-foreground">
@@ -29,14 +29,12 @@ export default async function InvoicesPage({
               &quot;Generate invoice&quot; to create one.
             </p>
           </div>
-          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-            <div className="pointer-events-auto w-full max-w-sm">
-              <SearchBar
-                scope="invoices"
-                loadIndex={loadSearchIndexAction}
-                placeholder="Search by invoice number or customer…"
-              />
-            </div>
+          <div className="w-full lg:max-w-sm">
+            <SearchBar
+              scope="invoices"
+              loadIndex={loadSearchIndexAction}
+              placeholder="Search by invoice number or customer…"
+            />
           </div>
         </div>
 
