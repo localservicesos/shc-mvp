@@ -7,10 +7,10 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { loadSearchIndexAction } from "@/app/app/search-actions";
 import {
   JOBS_PAGE_SIZE,
-  JOB_STATUSES,
-  JOB_STATUS_LABELS,
+  JOB_DISPLAY_STATUSES,
+  JOB_DISPLAY_STATUS_LABELS,
   listJobsPaged,
-  type JobStatus,
+  type JobDisplayStatus,
 } from "@/lib/db/jobs";
 import { getCurrentBusiness } from "@/lib/db/current-business";
 
@@ -18,9 +18,14 @@ export const metadata = {
   title: "Jobs",
 };
 
+// Includes the derived statuses (in_progress, needs_attention); the data layer
+// translates those into a time-windowed query over booked jobs.
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: "all", label: "All" },
-  ...JOB_STATUSES.map((s) => ({ value: s, label: JOB_STATUS_LABELS[s] })),
+  ...JOB_DISPLAY_STATUSES.map((s) => ({
+    value: s,
+    label: JOB_DISPLAY_STATUS_LABELS[s],
+  })),
 ];
 
 function buildHref(
@@ -42,7 +47,8 @@ export default async function JobsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const status = (params.status as JobStatus | "all" | undefined) ?? "all";
+  const status =
+    (params.status as JobDisplayStatus | "all" | undefined) ?? "all";
   const from = params.from;
   const to = params.to;
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);

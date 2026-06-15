@@ -6,6 +6,7 @@ import {
   JOB_STATUSES,
   createJob,
   deleteJob,
+  getJob,
   updateJob,
   type JobInput,
   type JobStatus,
@@ -143,6 +144,33 @@ export async function updateJobStatusAction(
     ...(status !== "cancelled" && { cancellation_reason: null }),
   };
   await updateJob(id, patch);
+  revalidatePath("/app/jobs");
+  revalidatePath(`/app/jobs/${id}`);
+}
+
+/**
+ * Set a new scheduled end for a job. Used by the "needs review" prompt when a
+ * job runs past its window: the owner picks a new end time and the job lands
+ * back in progress. `newEndLocal` is a datetime-local string ("YYYY-MM-DDTHH:MM")
+ * parsed as local time, matching the rest of the job form. updateJob re-checks
+ * the same-vehicle double-booking guard because the end moved.
+ */
+export async function extendJobAction(
+  id: string,
+  newEndLocal: string,
+): Promise<void> {
+  const newEnd = optionalDateTime(newEndLocal);
+  if (!newEnd) throw new Error("Pick a new end time.");
+
+  const job = await getJob(id);
+  if (!job) throw new Error("Job not found.");
+  if (!job.scheduled_start) throw new Error("This job has no start time.");
+  if (new Date(newEnd) <= new Date(job.scheduled_start)) {
+    throw new Error("End time must be after the start time.");
+  }
+
+  await updateJob(id, { scheduled_end: newEnd });
+
   revalidatePath("/app/jobs");
   revalidatePath(`/app/jobs/${id}`);
 }

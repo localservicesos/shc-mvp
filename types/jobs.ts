@@ -20,6 +20,64 @@ export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   cancelled: "Cancelled",
 };
 
+/**
+ * Display statuses extend the three PERSISTED statuses with two values that are
+ * derived from the clock at read time and never stored:
+ *   - `in_progress`  — a booked job whose scheduled window contains "now".
+ *   - `needs_attention` — a booked job whose scheduled window has already ended
+ *                      (the owner must mark it complete or extend the time).
+ * The database column stays a 3-value enum; see `effectiveJobStatus`.
+ * Order here doubles as the Jobs-page filter order.
+ */
+export const JOB_DISPLAY_STATUSES = [
+  "booked",
+  "in_progress",
+  "needs_attention",
+  "completed",
+  "cancelled",
+] as const;
+export type JobDisplayStatus = (typeof JOB_DISPLAY_STATUSES)[number];
+
+export const JOB_DISPLAY_STATUS_LABELS: Record<JobDisplayStatus, string> = {
+  booked: "Booked",
+  in_progress: "In progress",
+  needs_attention: "Needs attention",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+/**
+ * Resolve a job's display status from the clock. Only `booked` jobs can derive
+ * into `in_progress`/`needs_attention` — `completed` and `cancelled` are terminal
+ * and always returned as-is.
+ *
+ * The window is half-open [start, end): a job is in progress when
+ * `start <= now < end`, and needs review once `now >= end`. Comparisons use
+ * absolute instants (epoch ms), so this is timezone-safe and never touches the
+ * business-local calendar.
+ *
+ * Jobs are required to have an end time (enforced in the job form), so the
+ * no-end branch only guards legacy/seed rows: without an end we can't tell when
+ * the window closes, so we conservatively keep it `booked` rather than leave it
+ * stuck in_progress forever.
+ */
+export function effectiveJobStatus(
+  job: Pick<Job, "status" | "scheduled_start" | "scheduled_end">,
+  nowMs: number,
+): JobDisplayStatus {
+  if (job.status !== "booked") return job.status;
+  if (!job.scheduled_start) return "booked";
+
+  const start = Date.parse(job.scheduled_start);
+  if (Number.isNaN(start) || nowMs < start) return "booked";
+
+  if (!job.scheduled_end) return "booked";
+  const end = Date.parse(job.scheduled_end);
+  if (Number.isNaN(end)) return "booked";
+
+  return nowMs < end ? "in_progress" : "needs_attention";
+}
+
 export type Job = {
   id: string;
   business_id: string;

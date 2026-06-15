@@ -30,14 +30,12 @@ export default async function CustomersPage({
               People you do work for. Vehicles and jobs hang off these.
             </p>
           </div>
-          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-            <div className="pointer-events-auto w-full max-w-sm">
-              <SearchBar
-                scope="customers"
-                loadIndex={loadSearchIndexAction}
-                placeholder="Search by name, phone, email, address, or plate…"
-              />
-            </div>
+          <div className="order-last w-full lg:order-none">
+            <SearchBar
+              scope="customers"
+              loadIndex={loadSearchIndexAction}
+              placeholder="Search by name, phone, email, address, or plate…"
+            />
           </div>
           <Button asChild className="lg:justify-self-end">
             <Link href="/app/customers/new">
