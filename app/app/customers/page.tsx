@@ -30,8 +30,8 @@ export default async function CustomersPage({
               People you do work for. Vehicles and jobs hang off these.
             </p>
           </div>
-          <div className="pointer-events-none absolute inset-x-0 flex justify-center">
-            <div className="pointer-events-auto w-full max-w-sm">
+          <div className="pointer-events-none absolute inset-x-0 flex justify-center lg:static lg:pointer-events-auto">
+            <div className="pointer-events-auto w-full max-w-sm lg:max-w-none">
               <SearchBar
                 scope="customers"
                 loadIndex={loadSearchIndexAction}
